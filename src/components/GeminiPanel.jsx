@@ -235,17 +235,23 @@ export default function GeminiPanel({ symbol, timeframe, ticker, inds, signal, c
   const [retryIn,   setRetryIn]   = useState(null); // countdown seconds
   const retryTimer  = useRef(null);
   const pendingData = useRef(null);
+  const retryCount  = useRef(0);                    // max 1 auto-retry
 
-  // Countdown + auto-retry logic
+  // Countdown + single auto-retry
   useEffect(() => {
     if (retryIn === null) return;
     if (retryIn <= 0) {
       setRetryIn(null);
-      setError(null);
-      if (pendingData.current) {
+      if (pendingData.current && retryCount.current < 1) {
+        retryCount.current += 1;
+        setError(null);
         const d = pendingData.current;
         pendingData.current = null;
         runAnalysis(d.symbol, d.timeframe, d.ticker, d.inds, d.signal, d.candles, d.market, d.model);
+      } else {
+        // Give up — tell the user to retry manually
+        pendingData.current = null;
+        setError('Rate limit still active — please try again in a minute.');
       }
       return;
     }
@@ -260,16 +266,20 @@ export default function GeminiPanel({ symbol, timeframe, ticker, inds, signal, c
     try {
       const res = await getGeminiAnalysis({ symbol: sym, timeframe: tf, ticker: tkr, inds: ids, signal: sig, candles: cnd, market: mkt }, mdl);
       setResult(res);
+      retryCount.current = 0; // reset on success
     } catch (err) {
       if (err.message === 'ABORTED') {
         setError('Analysis cancelled.');
-      } else if (is429(err.message)) {
+      } else if (is429(err.message) && retryCount.current < 1) {
         const secs = parseRetrySeconds(err.message);
         pendingData.current = { symbol: sym, timeframe: tf, ticker: tkr, inds: ids, signal: sig, candles: cnd, market: mkt, model: mdl };
         setRetryIn(secs);
         setError('rate-limit');
       } else {
-        setError(err.message);
+        pendingData.current = null;
+        setError(is429(err.message)
+          ? 'Rate limit still active — please try again in a minute.'
+          : err.message);
       }
     } finally {
       setLoading(false);
@@ -278,6 +288,7 @@ export default function GeminiPanel({ symbol, timeframe, ticker, inds, signal, c
 
   const analyze = useCallback(() => {
     if (!candles?.length || !inds) return;
+    retryCount.current = 0;
     runAnalysis(symbol, timeframe, ticker, inds, signal, candles, market, model);
   }, [symbol, timeframe, ticker, inds, signal, candles, market, model, runAnalysis]);
 

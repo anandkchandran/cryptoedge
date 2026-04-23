@@ -1,15 +1,15 @@
 {
   "files": {
     "main.css": "/cryptoedge/static/css/main.7a3d3e4d.css",
-    "main.js": "/cryptoedge/static/js/main.ae5734ea.js",
+    "main.js": "/cryptoedge/static/js/main.a638f288.js",
     "static/js/453.79974ed7.chunk.js": "/cryptoedge/static/js/453.79974ed7.chunk.js",
     "index.html": "/cryptoedge/index.html",
     "main.7a3d3e4d.css.map": "/cryptoedge/static/css/main.7a3d3e4d.css.map",
-    "main.ae5734ea.js.map": "/cryptoedge/static/js/main.ae5734ea.js.map",
+    "main.a638f288.js.map": "/cryptoedge/static/js/main.a638f288.js.map",
     "453.79974ed7.chunk.js.map": "/cryptoedge/static/js/453.79974ed7.chunk.js.map"
   },
   "entrypoints": [
     "static/css/main.7a3d3e4d.css",
-    "static/js/main.ae5734ea.js"
+    "static/js/main.a638f288.js"
   ]
 }
