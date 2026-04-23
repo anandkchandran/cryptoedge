@@ -1,38 +1,366 @@
-.App {
-  text-align: center;
+/* ── CryptoEdge Pro — Skeleton Theme Layer ────────────────────────────────── */
+/*
+ * Skeleton.css provides: grid, base typography, buttons, forms, lists.
+ * This file overrides and extends those foundations for the dark terminal theme.
+ */
+
+/* ── Reset spacing that Skeleton adds ────────────────────────────────────── */
+
+*, *::before, *::after {
+  box-sizing: border-box;
 }
 
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
+/* Skeleton sets bottom margins on many elements — reset them inside the app */
+button, .button { margin-bottom: 0; }
+input, select, textarea, fieldset { margin-bottom: 0; }
+p, ul, ol, pre, blockquote, dl, figure, table, form { margin-bottom: 0; }
+li { margin-bottom: 0; }
+
+/* ── Typography — Skeleton's Raleway as the primary UI font ──────────────── */
+
+body {
+  /* Raleway is Skeleton's native font — used for all UI text, labels, headings.
+     Roboto Mono is reserved for numeric data (prices, percentages, readings). */
+  font-family: 'Raleway', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font-size: 13px;
+  line-height: 1.5;
+  font-weight: 400;
+  min-height: 100vh;
+  transition: background 0.2s, color 0.2s;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Raleway', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  margin-bottom: 0;
+  font-weight: 700;
 }
 
-.App-header {
-  background-color: #282c34;
+/* .mono — apply to prices, tickers, readings, any numeric data display */
+.mono {
+  font-family: 'Roboto Mono', 'Fira Code', 'Consolas', monospace;
+}
+
+/* Skeleton code blocks — always monospace */
+code {
+  font-family: 'Roboto Mono', 'Fira Code', 'Consolas', monospace;
+  font-size: 11px;
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+
+[data-theme="dark"] code {
+  background: #1c2740;
+  border-color: #2a3d5a;
+  color: #c4b5fd;
+}
+[data-theme="light"] code {
+  background: #f0f4f8;
+  border-color: #d0dae6;
+  color: #5b21b6;
+}
+
+/* ── App shell ───────────────────────────────────────────────────────────── */
+
+.app {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  transition: background 0.2s, color 0.2s;
+}
+
+/* ── Skeleton container — override to full-width for trading terminal ─────── */
+
+.app .container {
+  max-width: 100%;
+  width: 100%;
+  padding: 0;
+}
+
+/* ── Header — sticky freeze ──────────────────────────────────────────────── */
+
+.app-header-wrapper {
+  position: sticky;
+  top: 0;
+  z-index: 200;
+}
+
+.app-header {
+  display: flex;
   align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
+  justify-content: space-between;
+  padding: 10px 16px;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
-.App-link {
-  color: #61dafb;
+.app-header .brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
+.app-header .brand-name {
+  font-family: 'Raleway', sans-serif;
+  font-size: 17px;
+  font-weight: 700;
+  color: #7c6bfa;
+  letter-spacing: 1px;
+}
+
+.app-header .controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* ── Skeleton button overrides for terminal ──────────────────────────────── */
+
+button, .button {
+  font-family: 'Raleway', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font-size: 11px;
+  height: auto;
+  line-height: 1.4;
+  padding: 4px 12px;
+  letter-spacing: 0;
+  text-transform: none;
+  border-radius: 5px;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+/* Dark theme buttons */
+[data-theme="dark"] button,
+[data-theme="dark"] .button {
+  color: #7a95b0;
+  border-color: #1c2740;
+  background-color: #101520;
+}
+[data-theme="dark"] button:hover,
+[data-theme="dark"] .button:hover {
+  color: #b8cce0;
+  border-color: #2a3d5a;
+  background-color: #1c2740;
+}
+
+/* Light theme buttons */
+[data-theme="light"] button,
+[data-theme="light"] .button {
+  color: #5a7590;
+  border-color: #d0dae6;
+  background-color: #ffffff;
+}
+[data-theme="light"] button:hover,
+[data-theme="light"] .button:hover {
+  color: #2c3e50;
+  border-color: #7a95b0;
+  background-color: #f0f4f8;
+}
+
+/* Primary button variant */
+[data-theme="dark"] button.button-primary,
+[data-theme="dark"] .button.button-primary {
+  background: linear-gradient(135deg, #4c2fa0, #1e3a5f);
+  color: #c4b5fd;
+  border-color: #7c6bfa60;
+}
+[data-theme="dark"] button.button-primary:hover,
+[data-theme="dark"] .button.button-primary:hover {
+  background: linear-gradient(135deg, #5c3fb0, #2a4a6f);
+  color: #ddd6fe;
+  border-color: #7c6bfa;
+}
+[data-theme="light"] button.button-primary,
+[data-theme="light"] .button.button-primary {
+  background: linear-gradient(135deg, #4f46e5, #2563eb);
+  color: #ffffff;
+  border-color: #4f46e5;
+}
+[data-theme="light"] button.button-primary:hover,
+[data-theme="light"] .button.button-primary:hover {
+  background: linear-gradient(135deg, #4338ca, #1d4ed8);
+  border-color: #4338ca;
+}
+
+/* Danger button */
+button.button-danger, .button.button-danger {
+  background: #f8514918;
+  color: #f85149;
+  border-color: #f8514940;
+}
+button.button-danger:hover, .button.button-danger:hover {
+  background: #f8514930;
+  color: #ff6b6b;
+  border-color: #f8514970;
+}
+
+/* Accent button */
+[data-theme="dark"] button.button-accent,
+[data-theme="dark"] .button.button-accent {
+  background: #1e3a5f;
+  color: #60a5fa;
+  border-color: #2a5280;
+}
+[data-theme="dark"] button.button-accent:hover,
+[data-theme="dark"] .button.button-accent:hover {
+  background: #2a4a6f;
+  border-color: #3a6290;
+}
+[data-theme="light"] button.button-accent,
+[data-theme="light"] .button.button-accent {
+  background: #dbeafe;
+  color: #1d4ed8;
+  border-color: #93c5fd;
+}
+[data-theme="light"] button.button-accent:hover,
+[data-theme="light"] .button.button-accent:hover {
+  background: #bfdbfe;
+  border-color: #60a5fa;
+}
+
+/* Disabled */
+button:disabled, .button:disabled {
+  opacity: 0.5;
+  cursor: default !important;
+  pointer-events: none;
+}
+
+/* ── Skeleton select/input overrides ─────────────────────────────────────── */
+
+select,
+input[type="text"],
+input[type="password"],
+input[type="email"],
+input[type="search"] {
+  font-family: 'Raleway', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font-size: 12px;
+  height: 30px;
+  padding: 4px 8px;
+  border-radius: 5px;
+}
+
+[data-theme="dark"] select,
+[data-theme="dark"] input[type="text"],
+[data-theme="dark"] input[type="password"],
+[data-theme="dark"] input[type="email"] {
+  background: #0b0f1a;
+  color: #b8cce0;
+  border-color: #1c2740;
+}
+[data-theme="dark"] select:focus,
+[data-theme="dark"] input:focus {
+  border-color: #7c6bfa;
+  outline: none;
+}
+
+[data-theme="light"] select,
+[data-theme="light"] input[type="text"],
+[data-theme="light"] input[type="password"],
+[data-theme="light"] input[type="email"] {
+  background: #ffffff;
+  color: #2c3e50;
+  border-color: #d0dae6;
+}
+[data-theme="light"] select:focus,
+[data-theme="light"] input:focus {
+  border-color: #4f46e5;
+  outline: none;
+}
+
+/* ── Skeleton hr ─────────────────────────────────────────────────────────── */
+
+hr { margin: 10px 0; }
+[data-theme="dark"] hr { border-top-color: #1c2740; }
+[data-theme="light"] hr { border-top-color: #d0dae6; }
+
+/* ── Main 3-column layout ────────────────────────────────────────────────── */
+
+.main-row {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.main-row .col-surge {
+  width: 190px;
+  flex-shrink: 0;
+  overflow: hidden;
+  max-height: calc(100vh - 88px);
+  position: sticky;
+  top: 0;
+}
+.main-row .col-chart {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 6px 10px 10px;
+  overflow: hidden;
+}
+.main-row .col-signal {
+  width: 320px;
+  flex-shrink: 0;
+  padding: 10px 14px 10px 6px;
+  overflow-y: auto;
+  max-height: calc(100vh - 88px);
+}
+
+/* ── Loading spinner ─────────────────────────────────────────────────────── */
+
+.spinner {
+  font-size: 40px;
+  animation: spin 2s linear infinite;
+  display: inline-block;
+}
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* ── Scrollbars ──────────────────────────────────────────────────────────── */
+
+[data-theme="dark"] ::-webkit-scrollbar { width: 5px; height: 5px; }
+[data-theme="dark"] ::-webkit-scrollbar-track { background: #0b0f1a; }
+[data-theme="dark"] ::-webkit-scrollbar-thumb { background: #1c2740; border-radius: 3px; }
+[data-theme="dark"] ::-webkit-scrollbar-thumb:hover { background: #2a3d5a; }
+
+[data-theme="light"] ::-webkit-scrollbar { width: 5px; height: 5px; }
+[data-theme="light"] ::-webkit-scrollbar-track { background: #e8eef5; }
+[data-theme="light"] ::-webkit-scrollbar-thumb { background: #b0c4d8; border-radius: 3px; }
+[data-theme="light"] ::-webkit-scrollbar-thumb:hover { background: #8aa5be; }
+
+/* ── Skeleton list override inside panels ────────────────────────────────── */
+
+/* Skeleton gives ul list-style: circle inside. Panel lists use custom icon. */
+.panel-list {
+  list-style: none;
+  padding-left: 0;
+}
+.panel-list li {
+  margin-bottom: 0;
+}
+
+/* ── Responsive ──────────────────────────────────────────────────────────── */
+
+@media (max-width: 860px) {
+  .main-row { flex-direction: column; }
+  .main-row .col-surge { display: none; }
+  .main-row .col-chart,
+  .main-row .col-signal {
+    width: 100%;
+    padding: 8px 10px;
+    max-height: none;
   }
-  to {
-    transform: rotate(360deg);
-  }
+}
+@media (max-width: 1100px) {
+  .main-row .col-surge { width: 160px; }
+  .main-row .col-signal { width: 300px; }
+}
+
+/* ── Claude animations ───────────────────────────────────────────────────── */
+
+@keyframes claudePulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(1.15); }
+}
+@keyframes claudeDot {
+  0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+  40% { transform: scale(1); opacity: 1; }
 }
