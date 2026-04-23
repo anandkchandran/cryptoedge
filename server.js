@@ -227,7 +227,7 @@ function callGemini({ prompt, systemPrompt, model = 'gemini-2.0-flash' }) {
     const bodyStr = JSON.stringify({
       contents:          [{ parts: [{ text: prompt }] }],
       systemInstruction: { parts: [{ text: systemPrompt || '' }] },
-      generationConfig:  { temperature: 0.3, maxOutputTokens: 1500 },
+      generationConfig:  { temperature: 0.3, maxOutputTokens: 1500, responseMimeType: 'application/json' },
     });
 
     const reqPath = `/v1beta/models/${model}:generateContent?key=${apiKey}`;

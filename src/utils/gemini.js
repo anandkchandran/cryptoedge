@@ -229,12 +229,23 @@ export async function getGeminiAnalysis(data, model = 'gemini-2.0-flash') {
     throw new Error(msg);
   }
 
-  const raw   = (body.content ?? '').trim();
-  const clean = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
+  const raw = (body.content ?? '').trim();
 
-  try {
-    return JSON.parse(clean);
-  } catch {
-    throw new Error('Gemini returned malformed JSON — try again');
+  // 1. Try direct parse
+  try { return JSON.parse(raw); } catch {}
+
+  // 2. Strip markdown fences and retry
+  const stripped = raw
+    .replace(/^```(?:json)?\s*/im, '')
+    .replace(/\s*```\s*$/im, '')
+    .trim();
+  try { return JSON.parse(stripped); } catch {}
+
+  // 3. Extract the first {...} block (handles leading/trailing prose)
+  const match = raw.match(/\{[\s\S]*\}/);
+  if (match) {
+    try { return JSON.parse(match[0]); } catch {}
   }
+
+  throw new Error('Gemini returned malformed JSON — try again');
 }
