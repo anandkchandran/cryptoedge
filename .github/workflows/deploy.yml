@@ -10,7 +10,7 @@ permissions:
   contents: write
 
 jobs:
-  build-and-deploy:
+  deploy:
     runs-on: ubuntu-latest
 
     steps:
@@ -19,22 +19,7 @@ jobs:
         with:
           ref: no-claude
 
-      - name: Setup Node 20
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20.19.0'
-
-      - name: Install dependencies
-        run: npm install
-
-      - name: Build
-        env:
-          REACT_APP_API_URL: ${{ secrets.REACT_APP_API_URL }}
-          CI: false
-          GENERATE_SOURCEMAP: false
-        run: npm run build
-
-      - name: Deploy to gh-pages
+      - name: Deploy pre-built app to gh-pages
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
