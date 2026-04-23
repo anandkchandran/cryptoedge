@@ -15,6 +15,7 @@ import { SignalCard, SignalBreakdown, IndicatorValues, Disclaimer } from './comp
 import SurgingList         from './components/SurgingList';
 import PaperTrading        from './components/PaperTrading';
 import GeminiPanel         from './components/GeminiPanel';
+import GroqPanel           from './components/GroqPanel';
 
 // ── Spot / Futures toggle — displayed inside the chart column ─────────────────
 function MarketToggle({ market, onChange, C }) {
@@ -198,6 +199,12 @@ function AppInner() {
                 <SignalBreakdown signal={signal} />
                 <IndicatorValues inds={inds} candles={candles} />
                 <GeminiPanel
+                  symbol={symbol} timeframe={timeframe}
+                  ticker={ticker} inds={inds}
+                  signal={signal} candles={candles}
+                  market={market}
+                />
+                <GroqPanel
                   symbol={symbol} timeframe={timeframe}
                   ticker={ticker} inds={inds}
                   signal={signal} candles={candles}

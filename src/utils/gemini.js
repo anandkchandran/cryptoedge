@@ -38,7 +38,7 @@ function series(arr, n, count = 6, decimals = 2) {
   }).join(' → ');
 }
 
-function buildPrompt({ symbol, timeframe, ticker, inds, signal, candles, market }) {
+export function buildPrompt({ symbol, timeframe, ticker, inds, signal, candles, market }) {
   const marketLabel = market === 'futures' ? 'USDT-M Perpetual Futures' : 'Spot';
   const n     = candles.length - 1;
   const price = ticker?.price ?? candles[n].close;

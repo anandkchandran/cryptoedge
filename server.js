@@ -33,6 +33,7 @@ function log(tag, ...args) {
 // ── State ─────────────────────────────────────────────────────────────────────
 let activeProcess  = null;
 let geminiAbort    = false;   // simple flag to abort pending Gemini request
+let groqAbort      = false;   // simple flag to abort pending Groq request
 
 // ── Find claude binary ────────────────────────────────────────────────────────
 function findClaude() {
@@ -217,6 +218,75 @@ function callClaude({ prompt, systemPrompt, model = 'claude-sonnet-4-5' }, usePr
 // ── Gemini API (Node.js https module) ────────────────────────────────────────
 const https = require('https');
 
+function callGroq({ prompt, systemPrompt, model = 'llama-3.3-70b-versatile' }) {
+  return new Promise((resolve, reject) => {
+    const apiKey = process.env.GROQ_API_KEY;
+    if (!apiKey) return reject(new Error('GROQ_API_KEY is not set — add it to your Railway environment'));
+
+    groqAbort = false;
+
+    const messages = [];
+    if (systemPrompt) messages.push({ role: 'system', content: systemPrompt });
+    messages.push({ role: 'user', content: prompt });
+
+    const bodyStr = JSON.stringify({ model, messages, temperature: 0.3, max_tokens: 1500 });
+
+    log('GROQ', `POST /openai/v1/chat/completions  model=${model}  bodyLen=${bodyStr.length}`);
+
+    const options = {
+      hostname: 'api.groq.com',
+      port:     443,
+      path:     '/openai/v1/chat/completions',
+      method:   'POST',
+      headers: {
+        'Content-Type':   'application/json',
+        'Authorization':  `Bearer ${apiKey}`,
+        'Content-Length': Buffer.byteLength(bodyStr),
+      },
+    };
+
+    let settled = false;
+    const done = (err, val) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      if (err) reject(err); else resolve(val);
+    };
+
+    const timer = setTimeout(() => done(new Error(`Groq timed out after ${TIMEOUT_MS / 1000}s`)), TIMEOUT_MS);
+
+    const req = https.request(options, res => {
+      let raw = '';
+      res.on('data', chunk => { raw += chunk.toString(); });
+      res.on('end', () => {
+        if (groqAbort) return done(new Error('ABORTED'));
+        log('GROQ', `HTTP ${res.statusCode}  bytes=${raw.length}`);
+
+        let parsed;
+        try { parsed = JSON.parse(raw); } catch {
+          return done(new Error(`Groq non-JSON (HTTP ${res.statusCode}): ${raw.slice(0, 200)}`));
+        }
+        if (res.statusCode !== 200) {
+          const msg = parsed?.error?.message || `Groq error ${res.statusCode}`;
+          return done(new Error(`Groq ${res.statusCode}: ${msg}`));
+        }
+        const text = parsed?.choices?.[0]?.message?.content ?? '';
+        log('GROQ', `textLen=${text.length}  preview=${text.slice(0, 120).replace(/\n/g, ' ')}`);
+        if (!text) return done(new Error('Groq returned empty content'));
+        done(null, text);
+      });
+    });
+
+    req.on('error', err => {
+      if (groqAbort) return done(new Error('ABORTED'));
+      done(new Error(`Groq network error: ${err.message}`));
+    });
+
+    req.write(bodyStr);
+    req.end();
+  });
+}
+
 function callGemini({ prompt, systemPrompt, model = 'gemini-2.0-flash' }) {
   return new Promise((resolve, reject) => {
     const apiKey = process.env.GEMINI_API_KEY;
@@ -396,6 +466,31 @@ const server = http.createServer(async (req, res) => {
       res.writeHead(isAbort ? 499 : 500, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: err.message }));
     }
+    return;
+  }
+
+  // POST /api/groq
+  if (req.method === 'POST' && req.url === '/api/groq') {
+    log('HTTP', 'POST /api/groq');
+    try {
+      const body    = await readBody(req);
+      const content = await callGroq(body);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ content }));
+    } catch (err) {
+      const aborted = err.message === 'ABORTED';
+      res.writeHead(aborted ? 499 : 500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: err.message }));
+    }
+    return;
+  }
+
+  // POST /api/groq/abort
+  if (req.method === 'POST' && req.url === '/api/groq/abort') {
+    log('HTTP', 'POST /api/groq/abort');
+    groqAbort = true;
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ aborted: true }));
     return;
   }
 
