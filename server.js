@@ -402,7 +402,10 @@ const server = http.createServer(async (req, res) => {
   res.writeHead(404); res.end();
 });
 
-server.listen(PORT, '127.0.0.1', async () => {
+// Bind to 0.0.0.0 in production (required for Railway/Render/cloud hosts).
+// 127.0.0.1 is loopback-only and unreachable from the platform's load balancer.
+const HOST = process.env.NODE_ENV === 'production' ? '0.0.0.0' : '127.0.0.1';
+server.listen(PORT, HOST, async () => {
   const claudeBin = findClaude();
   const useProxy  = await proxyAvailable(COWORK_PROXY_PORT);
   console.log('\n══════════════════════════════════════════════════');
