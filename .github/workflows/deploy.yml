@@ -1,0 +1,45 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches:
+      - no-claude        # deploy whenever no-claude branch is pushed
+  workflow_dispatch:     # allow manual trigger from GitHub UI
+
+permissions:
+  contents: write        # needed to push to gh-pages branch
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: no-claude
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        env:
+          # Point the frontend at your Render backend
+          # Set this secret in: GitHub repo → Settings → Secrets → Actions
+          REACT_APP_API_URL: ${{ secrets.REACT_APP_API_URL }}
+          CI: false          # don't treat warnings as errors
+        run: npm run build
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./build
+          publish_branch: gh-pages
+          force_orphan: true   # keep gh-pages branch lean (no history)

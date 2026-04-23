@@ -9,7 +9,8 @@
  * Get a free key at: https://aistudio.google.com/app/apikey
  */
 
-const PROXY_URL = 'http://localhost:3001/api/gemini';
+const API_BASE  = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+const PROXY_URL = `${API_BASE}/api/gemini`;
 
 export const GEMINI_MODELS = [
   { id: 'gemini-2.0-flash',   label: 'Gemini 2.0 Flash (free)' },
@@ -195,7 +196,7 @@ let _abortController = null;
 
 export async function abortGeminiAnalysis() {
   if (_abortController) { _abortController.abort(); _abortController = null; }
-  try { await fetch('http://localhost:3001/api/gemini/abort', { method: 'POST' }); } catch {}
+  try { await fetch(`${API_BASE}/api/gemini/abort`, { method: 'POST' }); } catch {}
 }
 
 // ── Main API call ─────────────────────────────────────────────────────────────

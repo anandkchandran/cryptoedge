@@ -287,8 +287,11 @@ function callGemini({ prompt, systemPrompt, model = 'gemini-2.0-flash' }) {
 }
 
 // ── HTTP server ───────────────────────────────────────────────────────────────
+// Allow localhost in dev; set ALLOWED_ORIGIN on Render to your GH Pages URL
+const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || 'http://localhost:3000';
+
 function setCors(res) {
-  res.setHeader('Access-Control-Allow-Origin',  'http://localhost:3000');
+  res.setHeader('Access-Control-Allow-Origin',  ALLOWED_ORIGIN);
   res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 }
