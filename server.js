@@ -9,6 +9,7 @@
  */
 
 const http   = require('http');
+const https  = require('https');
 const net    = require('net');
 const tls    = require('tls');
 const { spawn, execSync } = require('child_process');
@@ -31,7 +32,8 @@ function log(tag, ...args) {
 }
 
 // ── State ─────────────────────────────────────────────────────────────────────
-let activeProcess = null;
+let activeProcess  = null;
+let geminiAbort    = false;   // simple flag to abort pending Gemini request
 
 // ── Find claude binary ────────────────────────────────────────────────────────
 function findClaude() {
@@ -213,6 +215,75 @@ function callClaude({ prompt, systemPrompt, model = 'claude-sonnet-4-5' }, usePr
   });
 }
 
+// ── Gemini API (raw HTTPS, no extra deps) ────────────────────────────────────
+function callGemini({ prompt, systemPrompt, model = 'gemini-2.0-flash' }) {
+  return new Promise((resolve, reject) => {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) return reject(new Error('GEMINI_API_KEY is not set — add it to your environment'));
+
+    geminiAbort = false;
+
+    const body = JSON.stringify({
+      contents: [{ parts: [{ text: prompt }] }],
+      systemInstruction: { parts: [{ text: systemPrompt || '' }] },
+      generationConfig: { temperature: 0.3, maxOutputTokens: 1500 },
+    });
+
+    const path = `/v1beta/models/${model}:generateContent?key=${apiKey}`;
+    log('GEMINI', `POST ${path.replace(/key=[^&]+/, 'key=***')}`);
+
+    const options = {
+      hostname: 'generativelanguage.googleapis.com',
+      port:     443,
+      path,
+      method:   'POST',
+      headers:  {
+        'Content-Type':   'application/json',
+        'Content-Length': Buffer.byteLength(body),
+      },
+    };
+
+    const timer = setTimeout(() => {
+      req.destroy();
+      reject(new Error(`Gemini timed out after ${TIMEOUT_MS / 1000}s`));
+    }, TIMEOUT_MS);
+
+    const req = https.request(options, (res) => {
+      let raw = '';
+      res.on('data', chunk => { raw += chunk; });
+      res.on('end', () => {
+        clearTimeout(timer);
+        if (geminiAbort) return reject(new Error('ABORTED'));
+        log('GEMINI', `status=${res.statusCode}  bytes=${raw.length}`);
+
+        let parsed;
+        try { parsed = JSON.parse(raw); } catch {
+          return reject(new Error('Gemini returned non-JSON response'));
+        }
+
+        if (res.statusCode !== 200) {
+          const msg = parsed?.error?.message || `Gemini API error ${res.statusCode}`;
+          return reject(new Error(msg));
+        }
+
+        const text = parsed?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+        if (!text) return reject(new Error('Gemini returned empty content'));
+        resolve(text);
+      });
+    });
+
+    req.on('error', err => {
+      clearTimeout(timer);
+      if (geminiAbort) return reject(new Error('ABORTED'));
+      log('GEMINI', 'request error:', err.message);
+      reject(new Error(`Gemini network error: ${err.message}`));
+    });
+
+    req.write(body);
+    req.end();
+  });
+}
+
 // ── HTTP server ───────────────────────────────────────────────────────────────
 function setCors(res) {
   res.setHeader('Access-Control-Allow-Origin',  'http://localhost:3000');
@@ -277,6 +348,32 @@ const server = http.createServer(async (req, res) => {
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ aborted: false }));
     }
+    return;
+  }
+
+  // POST /api/gemini
+  if (req.method === 'POST' && req.url === '/api/gemini') {
+    log('HTTP', 'POST /api/gemini');
+    try {
+      const body    = await readBody(req);
+      const content = await callGemini(body);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ content }));
+    } catch (err) {
+      const isAbort = err.message === 'ABORTED';
+      log('HTTP', `→ ${isAbort ? 499 : 500}  ${err.message.slice(0, 100)}`);
+      res.writeHead(isAbort ? 499 : 500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: err.message }));
+    }
+    return;
+  }
+
+  // POST /api/gemini/abort
+  if (req.method === 'POST' && req.url === '/api/gemini/abort') {
+    log('HTTP', 'POST /api/gemini/abort');
+    geminiAbort = true;
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ aborted: true }));
     return;
   }
 

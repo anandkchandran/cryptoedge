@@ -63,6 +63,7 @@ function LeverageButton({ val, active, onClick, C }) {
   );
 }
 
+// eslint-disable-next-line no-unused-vars
 function SlTpInput({ label, value, onChange, placeholder, color, C }) {
   return (
     <div style={{ flex: 1 }}>
