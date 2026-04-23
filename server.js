@@ -287,13 +287,22 @@ function callGemini({ prompt, systemPrompt, model = 'gemini-2.0-flash' }) {
 }
 
 // ── HTTP server ───────────────────────────────────────────────────────────────
-// Allow localhost in dev; set ALLOWED_ORIGIN on Render to your GH Pages URL
-const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || 'http://localhost:3000';
+// Allowed origins: comma-separated list in ALLOWED_ORIGINS env var,
+// or defaults that cover local dev + GitHub Pages.
+const ALLOWED_ORIGINS = new Set(
+  (process.env.ALLOWED_ORIGINS || [
+    'http://localhost:3000',
+    'https://anandkchandran.github.io',
+  ].join(','))
+    .split(',').map(s => s.trim()).filter(Boolean)
+);
 
-function setCors(res) {
-  res.setHeader('Access-Control-Allow-Origin',  ALLOWED_ORIGIN);
+function setCors(res, reqOrigin) {
+  const origin = ALLOWED_ORIGINS.has(reqOrigin) ? reqOrigin : [...ALLOWED_ORIGINS][0];
+  res.setHeader('Access-Control-Allow-Origin',  origin);
   res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Vary', 'Origin');
 }
 
 function readBody(req) {
@@ -306,7 +315,7 @@ function readBody(req) {
 }
 
 const server = http.createServer(async (req, res) => {
-  setCors(res);
+  setCors(res, req.headers['origin'] || '');
   if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return; }
 
   // POST /api/claude  ← LOCAL ONLY: requires the `claude` CLI binary on this machine
