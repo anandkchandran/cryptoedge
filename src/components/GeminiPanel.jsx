@@ -231,7 +231,7 @@ export default function GeminiPanel({ symbol, timeframe, ticker, inds, signal, c
   const [loading,   setLoading]   = useState(false);
   const [error,     setError]     = useState(null);
   const [collapsed, setCollapsed] = useState(false);
-  const [model,     setModel]     = useState('gemini-2.5-flash-preview-04-17');
+  const [model,     setModel]     = useState('gemini-2.5-flash');
   const [retryIn,   setRetryIn]   = useState(null); // countdown seconds
   const retryTimer  = useRef(null);
   const pendingData = useRef(null);

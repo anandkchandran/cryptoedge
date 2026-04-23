@@ -13,10 +13,10 @@ const API_BASE  = process.env.REACT_APP_API_URL || 'http://localhost:3001';
 const PROXY_URL = `${API_BASE}/api/gemini`;
 
 export const GEMINI_MODELS = [
-  { id: 'gemini-2.5-flash-preview-04-17', label: 'Gemini 2.5 Flash (latest)' },
-  { id: 'gemini-2.0-flash',               label: 'Gemini 2.0 Flash'           },
-  { id: 'gemini-1.5-flash',               label: 'Gemini 1.5 Flash'           },
-  { id: 'gemini-1.5-pro',                 label: 'Gemini 1.5 Pro'             },
+  { id: 'gemini-2.5-flash',  label: 'Gemini 2.5 Flash' },
+  { id: 'gemini-2.0-flash',  label: 'Gemini 2.0 Flash' },
+  { id: 'gemini-1.5-flash',  label: 'Gemini 1.5 Flash' },
+  { id: 'gemini-1.5-pro',    label: 'Gemini 1.5 Pro'   },
 ];
 
 // ── Prompt builder ────────────────────────────────────────────────────────────
