@@ -23,7 +23,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20.19.0'
-          cache: 'npm'
 
       - name: Install dependencies
         run: npm install
@@ -32,6 +31,7 @@ jobs:
         env:
           REACT_APP_API_URL: ${{ secrets.REACT_APP_API_URL }}
           CI: false
+          GENERATE_SOURCEMAP: false
         run: npm run build
 
       - name: Deploy to gh-pages
