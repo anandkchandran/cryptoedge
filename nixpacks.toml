@@ -2,9 +2,10 @@ providers = ["node"]
 
 [variables]
 NODE_VERSION = "20.19.0"
+NIXPACKS_NODE_BUILD_CMD = "npm install --legacy-peer-deps --omit=dev"
 
 [phases.install]
-cmds = ["npm install --omit=dev"]
+cmds = ["npm install --legacy-peer-deps --omit=dev"]
 
 [start]
 cmd = "node server.js"
