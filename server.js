@@ -31,7 +31,9 @@ function log(tag, ...args) {
 }
 
 // ── State ─────────────────────────────────────────────────────────────────────
-let activeProcess = null;
+let activeProcess  = null;
+let geminiAbort    = false;   // simple flag to abort pending Gemini request
+let groqAbort      = false;   // simple flag to abort pending Groq request
 
 // ── Find claude binary ────────────────────────────────────────────────────────
 function findClaude() {
@@ -213,11 +215,174 @@ function callClaude({ prompt, systemPrompt, model = 'claude-sonnet-4-5' }, usePr
   });
 }
 
+// ── Gemini API (Node.js https module) ────────────────────────────────────────
+const https = require('https');
+
+function callGroq({ prompt, systemPrompt, model = 'llama-3.3-70b-versatile' }) {
+  return new Promise((resolve, reject) => {
+    const apiKey = process.env.GROQ_API_KEY;
+    if (!apiKey) return reject(new Error('GROQ_API_KEY is not set — add it to your Railway environment'));
+
+    groqAbort = false;
+
+    const messages = [];
+    if (systemPrompt) messages.push({ role: 'system', content: systemPrompt });
+    messages.push({ role: 'user', content: prompt });
+
+    const bodyStr = JSON.stringify({ model, messages, temperature: 0.3, max_tokens: 1500 });
+
+    log('GROQ', `POST /openai/v1/chat/completions  model=${model}  bodyLen=${bodyStr.length}`);
+
+    const options = {
+      hostname: 'api.groq.com',
+      port:     443,
+      path:     '/openai/v1/chat/completions',
+      method:   'POST',
+      headers: {
+        'Content-Type':   'application/json',
+        'Authorization':  `Bearer ${apiKey}`,
+        'Content-Length': Buffer.byteLength(bodyStr),
+      },
+    };
+
+    let settled = false;
+    const done = (err, val) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      if (err) reject(err); else resolve(val);
+    };
+
+    const timer = setTimeout(() => done(new Error(`Groq timed out after ${TIMEOUT_MS / 1000}s`)), TIMEOUT_MS);
+
+    const req = https.request(options, res => {
+      let raw = '';
+      res.on('data', chunk => { raw += chunk.toString(); });
+      res.on('end', () => {
+        if (groqAbort) return done(new Error('ABORTED'));
+        log('GROQ', `HTTP ${res.statusCode}  bytes=${raw.length}`);
+
+        let parsed;
+        try { parsed = JSON.parse(raw); } catch {
+          return done(new Error(`Groq non-JSON (HTTP ${res.statusCode}): ${raw.slice(0, 200)}`));
+        }
+        if (res.statusCode !== 200) {
+          const msg = parsed?.error?.message || `Groq error ${res.statusCode}`;
+          return done(new Error(`Groq ${res.statusCode}: ${msg}`));
+        }
+        const text = parsed?.choices?.[0]?.message?.content ?? '';
+        log('GROQ', `textLen=${text.length}  preview=${text.slice(0, 120).replace(/\n/g, ' ')}`);
+        if (!text) return done(new Error('Groq returned empty content'));
+        done(null, text);
+      });
+    });
+
+    req.on('error', err => {
+      if (groqAbort) return done(new Error('ABORTED'));
+      done(new Error(`Groq network error: ${err.message}`));
+    });
+
+    req.write(bodyStr);
+    req.end();
+  });
+}
+
+function callGemini({ prompt, systemPrompt, model = 'gemini-2.0-flash' }) {
+  return new Promise((resolve, reject) => {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) return reject(new Error('GEMINI_API_KEY is not set — add it to your environment'));
+
+    geminiAbort = false;
+
+    const bodyStr = JSON.stringify({
+      contents:          [{ parts: [{ text: prompt }] }],
+      systemInstruction: { parts: [{ text: systemPrompt || '' }] },
+      generationConfig:  {
+        temperature:      0.3,
+        maxOutputTokens:  1500,
+        responseMimeType: 'application/json',
+        thinkingConfig:   { thinkingBudget: 0 },   // disable thinking tokens for structured JSON
+      },
+    });
+
+    const reqPath = `/v1beta/models/${model}:generateContent?key=${apiKey}`;
+    log('GEMINI', `POST ${reqPath.replace(/key=[^&]+/, 'key=***')}  bodyLen=${bodyStr.length}`);
+
+    const options = {
+      hostname: 'generativelanguage.googleapis.com',
+      port:     443,
+      path:     reqPath,
+      method:   'POST',
+      headers: {
+        'Content-Type':   'application/json',
+        'Content-Length': Buffer.byteLength(bodyStr),
+      },
+    };
+
+    let settled = false;
+    const done = (err, val) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      if (err) reject(err); else resolve(val);
+    };
+
+    const timer = setTimeout(() => done(new Error(`Gemini timed out after ${TIMEOUT_MS / 1000}s`)), TIMEOUT_MS);
+
+    const req = https.request(options, res => {
+      let raw = '';
+      res.on('data', chunk => { raw += chunk.toString(); });
+      res.on('end', () => {
+        if (geminiAbort) return done(new Error('ABORTED'));
+        log('GEMINI', `HTTP ${res.statusCode}  bytes=${raw.length}`);
+        log('GEMINI', `body[:300]: ${raw.slice(0, 300).replace(/\n/g, ' ')}`);
+
+        let parsed;
+        try { parsed = JSON.parse(raw); } catch {
+          return done(new Error(`Gemini non-JSON (HTTP ${res.statusCode}): ${raw.slice(0, 200).replace(/\n/g, ' ')}`));
+        }
+        if (res.statusCode !== 200) {
+          const msg = parsed?.error?.message || parsed?.error?.status || `Gemini error ${res.statusCode}`;
+          return done(new Error(`Gemini ${res.statusCode}: ${msg}`));
+        }
+        const parts = parsed?.candidates?.[0]?.content?.parts ?? [];
+        // Skip 'thought' parts (thinking tokens); grab first real text part
+        const text = parts.find(p => p.text && !p.thought)?.text
+                  ?? parts.find(p => p.text)?.text
+                  ?? '';
+        log('GEMINI', `parts=${parts.length}  textLen=${text.length}  preview=${text.slice(0,120).replace(/\n/g,' ')}`);
+        if (!text) return done(new Error('Gemini returned empty content'));
+        done(null, text);
+      });
+    });
+
+    req.on('error', err => {
+      if (geminiAbort) return done(new Error('ABORTED'));
+      done(new Error(`Gemini network error: ${err.message}`));
+    });
+
+    req.write(bodyStr);
+    req.end();
+  });
+}
+
 // ── HTTP server ───────────────────────────────────────────────────────────────
-function setCors(res) {
-  res.setHeader('Access-Control-Allow-Origin',  'http://localhost:3000');
+// Allowed origins: comma-separated list in ALLOWED_ORIGINS env var,
+// or defaults that cover local dev + GitHub Pages.
+const ALLOWED_ORIGINS = new Set(
+  (process.env.ALLOWED_ORIGINS || [
+    'http://localhost:3000',
+    'https://anandkchandran.github.io',
+  ].join(','))
+    .split(',').map(s => s.trim()).filter(Boolean)
+);
+
+function setCors(res, reqOrigin) {
+  const origin = ALLOWED_ORIGINS.has(reqOrigin) ? reqOrigin : [...ALLOWED_ORIGINS][0];
+  res.setHeader('Access-Control-Allow-Origin',  origin);
   res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Vary', 'Origin');
 }
 
 function readBody(req) {
@@ -230,12 +395,19 @@ function readBody(req) {
 }
 
 const server = http.createServer(async (req, res) => {
-  setCors(res);
+  setCors(res, req.headers['origin'] || '');
   if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return; }
 
-  // POST /api/claude
+  // POST /api/claude  ← LOCAL ONLY: requires the `claude` CLI binary on this machine
   if (req.method === 'POST' && req.url === '/api/claude') {
     log('HTTP', 'POST /api/claude');
+    // Fail fast on cloud / CI where the claude binary is not installed
+    const claudeBinCheck = findClaude();
+    try { fs.accessSync(claudeBinCheck, fs.constants.X_OK); } catch {
+      res.writeHead(503, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Claude AI is only available when running locally — use Gemini for cloud deployments.' }));
+      return;
+    }
     try {
       const body     = await readBody(req);
       const useProxy = await proxyAvailable(COWORK_PROXY_PORT);
@@ -280,6 +452,58 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // POST /api/gemini
+  if (req.method === 'POST' && req.url === '/api/gemini') {
+    log('HTTP', 'POST /api/gemini');
+    try {
+      const body    = await readBody(req);
+      const content = await callGemini(body);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ content }));
+    } catch (err) {
+      const isAbort = err.message === 'ABORTED';
+      log('HTTP', `→ ${isAbort ? 499 : 500}  ${err.message.slice(0, 100)}`);
+      res.writeHead(isAbort ? 499 : 500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: err.message }));
+    }
+    return;
+  }
+
+  // POST /api/groq
+  if (req.method === 'POST' && req.url === '/api/groq') {
+    log('HTTP', 'POST /api/groq');
+    try {
+      const body    = await readBody(req);
+      const content = await callGroq(body);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ content }));
+    } catch (err) {
+      const aborted = err.message === 'ABORTED';
+      res.writeHead(aborted ? 499 : 500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: err.message }));
+    }
+    return;
+  }
+
+  // POST /api/groq/abort
+  if (req.method === 'POST' && req.url === '/api/groq/abort') {
+    log('HTTP', 'POST /api/groq/abort');
+    groqAbort = true;
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ aborted: true }));
+    return;
+  }
+
+  // POST /api/gemini/abort
+  if (req.method === 'POST' && req.url === '/api/gemini/abort') {
+    log('HTTP', 'POST /api/gemini/abort');
+    geminiAbort = true;
+    if (geminiProc) { try { geminiProc.kill('SIGTERM'); } catch {} geminiProc = null; }
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ aborted: true }));
+    return;
+  }
+
   // GET /health
   if (req.method === 'GET' && req.url === '/health') {
     const claudeBin  = findClaude();
@@ -292,11 +516,14 @@ const server = http.createServer(async (req, res) => {
   res.writeHead(404); res.end();
 });
 
-server.listen(PORT, '127.0.0.1', async () => {
+// Bind to 0.0.0.0 in production (required for Railway/Render/cloud hosts).
+// 127.0.0.1 is loopback-only and unreachable from the platform's load balancer.
+const HOST = process.env.NODE_ENV === 'production' ? '0.0.0.0' : '127.0.0.1';
+server.listen(PORT, HOST, async () => {
   const claudeBin = findClaude();
   const useProxy  = await proxyAvailable(COWORK_PROXY_PORT);
   console.log('\n══════════════════════════════════════════════════');
-  console.log('  ◈  CryptoEdge Pro — Claude Proxy Server  (claude-sonnet-4-5)');
+  console.log('  ◈  CryptoEdge Pro — Claude Proxy Server');
   console.log('══════════════════════════════════════════════════');
   console.log(`  Port     : http://localhost:${PORT}`);
   console.log(`  Claude   : ${claudeBin}`);

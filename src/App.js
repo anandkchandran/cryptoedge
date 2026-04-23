@@ -11,9 +11,11 @@ import TickerRow           from './components/TickerRow';
 import { PriceChart, RSIChart, MACDChart } from './components/Charts';
 import TradingViewWidget   from './components/TradingViewWidget';
 import { SignalCard, SignalBreakdown, IndicatorValues, Disclaimer } from './components/SignalPanel';
-import ClaudePanel         from './components/ClaudePanel';
+
 import SurgingList         from './components/SurgingList';
 import PaperTrading        from './components/PaperTrading';
+import GeminiPanel         from './components/GeminiPanel';
+import GroqPanel           from './components/GroqPanel';
 
 // ── Spot / Futures toggle — displayed inside the chart column ─────────────────
 function MarketToggle({ market, onChange, C }) {
@@ -191,20 +193,23 @@ function AppInner() {
                 }
               </div>
 
-              {/* Right: Signal + Claude */}
+              {/* Right: Signal */}
               <div className="col-signal">
                 <SignalCard      signal={signal} market={market} />
                 <SignalBreakdown signal={signal} />
-                <ClaudePanel
-                  symbol={symbol}
-                  timeframe={timeframe}
-                  ticker={ticker}
-                  inds={inds}
-                  signal={signal}
-                  candles={candles}
+                <IndicatorValues inds={inds} candles={candles} />
+                <GeminiPanel
+                  symbol={symbol} timeframe={timeframe}
+                  ticker={ticker} inds={inds}
+                  signal={signal} candles={candles}
                   market={market}
                 />
-                <IndicatorValues inds={inds} candles={candles} />
+                <GroqPanel
+                  symbol={symbol} timeframe={timeframe}
+                  ticker={ticker} inds={inds}
+                  signal={signal} candles={candles}
+                  market={market}
+                />
                 <PaperTrading ticker={ticker} symbol={symbol} />
                 <Disclaimer      lastUpdate={lastUpdate} />
               </div>
