@@ -1,16 +1,14 @@
-name: Deploy to GitHub Pages
+name: Deploy Frontend to Vercel
 
 on:
   push:
     branches:
-      - no-claude        # deploy whenever no-claude branch is pushed
-  workflow_dispatch:     # allow manual trigger from GitHub UI
-
-permissions:
-  contents: write        # needed to push to gh-pages branch
+      - no-claude          # auto-deploy on every push to this branch
+  workflow_dispatch:       # allow manual trigger from GitHub Actions UI
 
 jobs:
-  build-and-deploy:
+  deploy:
+    name: Build & Deploy to Vercel
     runs-on: ubuntu-latest
 
     steps:
@@ -30,16 +28,17 @@ jobs:
 
       - name: Build
         env:
-          # Point the frontend at your Render backend
-          # Set this secret in: GitHub repo → Settings → Secrets → Actions
+          # Your Railway backend URL — set this in:
+          # GitHub repo → Settings → Secrets → Actions → New repository secret
           REACT_APP_API_URL: ${{ secrets.REACT_APP_API_URL }}
-          CI: false          # don't treat warnings as errors
+          CI: false        # don't treat ESLint warnings as build errors
         run: npm run build
 
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v4
+      - name: Deploy to Vercel (Production)
+        uses: amondnet/vercel-action@v25
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./build
-          publish_branch: gh-pages
-          force_orphan: true   # keep gh-pages branch lean (no history)
+          vercel-token:      ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id:     ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          vercel-args:       '--prod'
+          working-directory: ./
