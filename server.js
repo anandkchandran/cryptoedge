@@ -306,9 +306,16 @@ const server = http.createServer(async (req, res) => {
   setCors(res);
   if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return; }
 
-  // POST /api/claude
+  // POST /api/claude  ← LOCAL ONLY: requires the `claude` CLI binary on this machine
   if (req.method === 'POST' && req.url === '/api/claude') {
     log('HTTP', 'POST /api/claude');
+    // Fail fast on cloud / CI where the claude binary is not installed
+    const claudeBinCheck = findClaude();
+    try { fs.accessSync(claudeBinCheck, fs.constants.X_OK); } catch {
+      res.writeHead(503, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Claude AI is only available when running locally — use Gemini for cloud deployments.' }));
+      return;
+    }
     try {
       const body     = await readBody(req);
       const useProxy = await proxyAvailable(COWORK_PROXY_PORT);
