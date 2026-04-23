@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useTheme } from '../contexts/ThemeContext';
 import { fmtPrice } from '../utils/format';
 import { getGeminiAnalysis, abortGeminiAnalysis, GEMINI_MODELS } from '../utils/gemini';
@@ -214,6 +214,16 @@ function AnalysisResult({ result, market = 'spot' }) {
   );
 }
 
+// ── Parse retry-after seconds from a 429 message ─────────────────────────────
+function parseRetrySeconds(msg = '') {
+  const m = msg.match(/retry in (\d+(?:\.\d+)?)/i);
+  return m ? Math.ceil(parseFloat(m[1])) + 2 : 62; // +2s buffer; default 62s
+}
+
+function is429(msg = '') {
+  return msg.includes('429') || msg.toLowerCase().includes('quota') || msg.toLowerCase().includes('rate limit');
+}
+
 // ── Main component ────────────────────────────────────────────────────────────
 export default function GeminiPanel({ symbol, timeframe, ticker, inds, signal, candles, market = 'spot' }) {
   const { colors: C } = useTheme();
@@ -222,30 +232,60 @@ export default function GeminiPanel({ symbol, timeframe, ticker, inds, signal, c
   const [error,     setError]     = useState(null);
   const [collapsed, setCollapsed] = useState(false);
   const [model,     setModel]     = useState('gemini-2.0-flash');
+  const [retryIn,   setRetryIn]   = useState(null); // countdown seconds
+  const retryTimer  = useRef(null);
+  const pendingData = useRef(null);
 
-  const analyze = useCallback(async () => {
-    if (!candles?.length || !inds) return;
+  // Countdown + auto-retry logic
+  useEffect(() => {
+    if (retryIn === null) return;
+    if (retryIn <= 0) {
+      setRetryIn(null);
+      setError(null);
+      if (pendingData.current) {
+        const d = pendingData.current;
+        pendingData.current = null;
+        runAnalysis(d.symbol, d.timeframe, d.ticker, d.inds, d.signal, d.candles, d.market, d.model);
+      }
+      return;
+    }
+    retryTimer.current = setTimeout(() => setRetryIn(r => r - 1), 1000);
+    return () => clearTimeout(retryTimer.current);
+  }, [retryIn]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const runAnalysis = useCallback(async (sym, tf, tkr, ids, sig, cnd, mkt, mdl) => {
     setLoading(true);
     setError(null);
+    setRetryIn(null);
     try {
-      const res = await getGeminiAnalysis(
-        { symbol, timeframe, ticker, inds, signal, candles, market },
-        model,
-      );
+      const res = await getGeminiAnalysis({ symbol: sym, timeframe: tf, ticker: tkr, inds: ids, signal: sig, candles: cnd, market: mkt }, mdl);
       setResult(res);
     } catch (err) {
       if (err.message === 'ABORTED') {
         setError('Analysis cancelled.');
+      } else if (is429(err.message)) {
+        const secs = parseRetrySeconds(err.message);
+        pendingData.current = { symbol: sym, timeframe: tf, ticker: tkr, inds: ids, signal: sig, candles: cnd, market: mkt, model: mdl };
+        setRetryIn(secs);
+        setError('rate-limit');
       } else {
         setError(err.message);
       }
     } finally {
       setLoading(false);
     }
-  }, [symbol, timeframe, ticker, inds, signal, candles, market, model]);
+  }, []);
+
+  const analyze = useCallback(() => {
+    if (!candles?.length || !inds) return;
+    runAnalysis(symbol, timeframe, ticker, inds, signal, candles, market, model);
+  }, [symbol, timeframe, ticker, inds, signal, candles, market, model, runAnalysis]);
 
   const abort = () => {
     abortGeminiAnalysis();
+    clearTimeout(retryTimer.current);
+    pendingData.current = null;
+    setRetryIn(null);
     setLoading(false);
     setError('Analysis cancelled.');
   };
@@ -375,16 +415,45 @@ export default function GeminiPanel({ symbol, timeframe, ticker, inds, signal, c
             </div>
           )}
 
-          {/* ── Error ── */}
+          {/* ── Error / rate-limit countdown ── */}
           {error && !loading && (
-            <div style={{
-              fontFamily: "'Raleway', sans-serif", fontSize: 11,
-              color: '#f85149', background: '#f8514912',
-              border: '1px solid #f8514930', borderRadius: 5,
-              padding: '8px 12px', marginBottom: 10,
-            }}>
-              ⚠ {error}
-            </div>
+            error === 'rate-limit' ? (
+              <div style={{
+                fontFamily: "'Raleway', sans-serif", fontSize: 11,
+                color: G_YELLOW, background: `${G_YELLOW}12`,
+                border: `1px solid ${G_YELLOW}40`, borderRadius: 5,
+                padding: '10px 12px', marginBottom: 10, textAlign: 'center',
+              }}>
+                <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>
+                  ⏳ Free tier rate limit hit
+                </div>
+                <div style={{ color: '#b8cce0', marginBottom: 6 }}>
+                  Auto-retrying in <span style={{ color: G_YELLOW, fontWeight: 700, fontSize: 14 }}>{retryIn}s</span>
+                </div>
+                <div style={{ fontSize: 9, color: '#6b8096' }}>
+                  Gemini free tier: 15 requests / min · Switch to 1.5 Flash for a separate quota
+                </div>
+                <button
+                  onClick={abort}
+                  style={{
+                    marginTop: 8, fontFamily: "'Raleway', sans-serif", fontSize: 10,
+                    padding: '3px 12px', borderRadius: 4, cursor: 'pointer',
+                    border: '1px solid #f8514960', background: '#f8514918', color: '#f85149',
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <div style={{
+                fontFamily: "'Raleway', sans-serif", fontSize: 11,
+                color: '#f85149', background: '#f8514912',
+                border: '1px solid #f8514930', borderRadius: 5,
+                padding: '8px 12px', marginBottom: 10,
+              }}>
+                ⚠ {error}
+              </div>
+            )
           )}
 
           {/* ── Result ── */}
