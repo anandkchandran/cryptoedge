@@ -14,7 +14,6 @@ import { SignalCard, SignalBreakdown, IndicatorValues, Disclaimer } from './comp
 
 import SurgingList         from './components/SurgingList';
 import PaperTrading        from './components/PaperTrading';
-import OpenAIPanel         from './components/OpenAIPanel';
 
 // ── Spot / Futures toggle — displayed inside the chart column ─────────────────
 function MarketToggle({ market, onChange, C }) {
@@ -192,19 +191,10 @@ function AppInner() {
                 }
               </div>
 
-              {/* Right: Signal + OpenAI */}
+              {/* Right: Signal */}
               <div className="col-signal">
                 <SignalCard      signal={signal} market={market} />
                 <SignalBreakdown signal={signal} />
-                <OpenAIPanel
-                  symbol={symbol}
-                  timeframe={timeframe}
-                  ticker={ticker}
-                  inds={inds}
-                  signal={signal}
-                  candles={candles}
-                  market={market}
-                />
                 <IndicatorValues inds={inds} candles={candles} />
                 <PaperTrading ticker={ticker} symbol={symbol} />
                 <Disclaimer      lastUpdate={lastUpdate} />

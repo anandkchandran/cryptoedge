@@ -213,116 +213,6 @@ function callClaude({ prompt, systemPrompt, model = 'claude-sonnet-4-5' }, usePr
   });
 }
 
-// ── OpenAI API call ───────────────────────────────────────────────────────────
-let openaiSocket = null; // held so we can destroy it on abort
-
-function callOpenAI({ prompt, systemPrompt, model = 'gpt-4o-mini' }, useProxy) {
-  return new Promise((resolve, reject) => {
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) {
-      return reject(new Error(
-        'OPENAI_API_KEY environment variable is not set.\n' +
-        'Add it before starting the server:  OPENAI_API_KEY=sk-... node server.js'
-      ));
-    }
-
-    const bodyObj = {
-      model,
-      messages: [
-        { role: 'system', content: systemPrompt || 'You are a helpful assistant.' },
-        { role: 'user',   content: prompt },
-      ],
-      temperature: 0.3,
-      max_tokens:  1500,
-    };
-    const bodyStr   = JSON.stringify(bodyObj);
-    const targetHost = 'api.openai.com';
-    const targetPort = 443;
-    const reqPath    = '/v1/chat/completions';
-
-    log('OPENAI', `model=${model}  proxy=${useProxy ? `localhost:${COWORK_PROXY_PORT}` : 'none'}  chars=${prompt.length}`);
-
-    function makeRequest(sock) {
-      // Write raw HTTP/1.1 over the (optionally tunnelled) TLS socket
-      const tlsConn = tls.connect({ socket: sock, servername: targetHost }, () => {
-        openaiSocket = tlsConn;
-        const req =
-          `POST ${reqPath} HTTP/1.1\r\n` +
-          `Host: ${targetHost}\r\n` +
-          `Authorization: Bearer ${apiKey}\r\n` +
-          `Content-Type: application/json\r\n` +
-          `Content-Length: ${Buffer.byteLength(bodyStr)}\r\n` +
-          `Connection: close\r\n\r\n` +
-          bodyStr;
-        tlsConn.write(req);
-      });
-
-      let raw = '';
-      tlsConn.on('data',  c => { raw += c; });
-      tlsConn.on('error', reject);
-      tlsConn.on('end', () => {
-        openaiSocket = null;
-        try {
-          // Strip HTTP headers
-          const bodyStart = raw.indexOf('\r\n\r\n');
-          let   body      = bodyStart >= 0 ? raw.slice(bodyStart + 4) : raw;
-
-          // Handle chunked transfer encoding
-          if (raw.includes('Transfer-Encoding: chunked')) {
-            const chunks = [];
-            let pos = 0;
-            while (pos < body.length) {
-              const lineEnd = body.indexOf('\r\n', pos);
-              if (lineEnd < 0) break;
-              const size = parseInt(body.slice(pos, lineEnd), 16);
-              if (isNaN(size) || size === 0) break;
-              chunks.push(body.slice(lineEnd + 2, lineEnd + 2 + size));
-              pos = lineEnd + 2 + size + 2;
-            }
-            body = chunks.join('');
-          }
-
-          const json    = JSON.parse(body);
-          const status  = parseInt(raw.split(' ')[1], 10);
-
-          if (status !== 200) {
-            const msg = json?.error?.message || `OpenAI API error (HTTP ${status})`;
-            return reject(new Error(msg));
-          }
-
-          const content = json?.choices?.[0]?.message?.content ?? '';
-          log('OPENAI', `tokens=${json?.usage?.total_tokens ?? '?'}  finish=${json?.choices?.[0]?.finish_reason}`);
-          resolve(content);
-        } catch (e) {
-          reject(new Error(`Failed to parse OpenAI response: ${e.message}`));
-        }
-      });
-    }
-
-    if (useProxy) {
-      // CONNECT tunnel through Cowork proxy
-      const proxySock = net.createConnection(COWORK_PROXY_PORT, '127.0.0.1');
-      proxySock.write(`CONNECT ${targetHost}:${targetPort} HTTP/1.1\r\nHost: ${targetHost}:${targetPort}\r\n\r\n`);
-      let buf = '';
-      proxySock.on('data', chunk => {
-        buf += chunk.toString();
-        if (buf.includes('\r\n\r\n')) {
-          proxySock.removeAllListeners('data');
-          if (!buf.includes('200')) {
-            return reject(new Error(`Proxy CONNECT failed: ${buf.split('\r\n')[0]}`));
-          }
-          makeRequest(proxySock);
-        }
-      });
-      proxySock.on('error', reject);
-    } else {
-      const directSock = net.createConnection(targetPort, targetHost);
-      directSock.on('connect', () => makeRequest(directSock));
-      directSock.on('error', reject);
-    }
-  });
-}
-
 // ── HTTP server ───────────────────────────────────────────────────────────────
 function setCors(res) {
   res.setHeader('Access-Control-Allow-Origin',  'http://localhost:3000');
@@ -390,46 +280,6 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // POST /api/openai
-  if (req.method === 'POST' && req.url === '/api/openai') {
-    log('HTTP', 'POST /api/openai');
-    try {
-      const body     = await readBody(req);
-      const useProxy = await proxyAvailable(COWORK_PROXY_PORT);
-      log('HTTP', `Cowork proxy → ${useProxy ? 'DETECTED ✓' : 'not found'}`);
-
-      let content;
-      try {
-        content = await callOpenAI(body, useProxy);
-      } catch (err) {
-        if (!useProxy && (err.message.includes('ENOTFOUND') || err.message.includes('connect'))) {
-          log('RETRY', 'Direct failed — retrying via proxy');
-          content = await callOpenAI(body, true);
-        } else {
-          throw err;
-        }
-      }
-
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ content }));
-    } catch (err) {
-      const isAbort = err.message === 'ABORTED';
-      log('HTTP', `→ ${isAbort ? 499 : 500}  ${err.message.slice(0, 100)}`);
-      res.writeHead(isAbort ? 499 : 500, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: err.message }));
-    }
-    return;
-  }
-
-  // POST /api/openai/abort
-  if (req.method === 'POST' && req.url === '/api/openai/abort') {
-    log('HTTP', 'POST /api/openai/abort');
-    if (openaiSocket) { try { openaiSocket.destroy(); } catch {} openaiSocket = null; }
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ aborted: true }));
-    return;
-  }
-
   // GET /health
   if (req.method === 'GET' && req.url === '/health') {
     const claudeBin  = findClaude();
@@ -446,11 +296,10 @@ server.listen(PORT, '127.0.0.1', async () => {
   const claudeBin = findClaude();
   const useProxy  = await proxyAvailable(COWORK_PROXY_PORT);
   console.log('\n══════════════════════════════════════════════════');
-  console.log('  ◈  CryptoEdge Pro — AI Proxy Server  (Claude + OpenAI)');
+  console.log('  ◈  CryptoEdge Pro — Claude Proxy Server');
   console.log('══════════════════════════════════════════════════');
   console.log(`  Port     : http://localhost:${PORT}`);
   console.log(`  Claude   : ${claudeBin}`);
-  console.log(`  OpenAI   : ${process.env.OPENAI_API_KEY ? '✓ OPENAI_API_KEY set' : '✗ OPENAI_API_KEY not set — export it before using OpenAI panel'}`);
   console.log(`  Proxy    : ${useProxy ? `✓ Cowork proxy detected (localhost:${COWORK_PROXY_PORT})` : `✗ not found (will try direct)`}`);
   console.log('══════════════════════════════════════════════════');
 
