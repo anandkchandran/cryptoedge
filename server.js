@@ -9,7 +9,6 @@
  */
 
 const http   = require('http');
-const https  = require('https');
 const net    = require('net');
 const tls    = require('tls');
 const { spawn, execSync } = require('child_process');
@@ -215,7 +214,9 @@ function callClaude({ prompt, systemPrompt, model = 'claude-sonnet-4-5' }, usePr
   });
 }
 
-// ── Gemini API (raw HTTPS, no extra deps) ────────────────────────────────────
+// ── Gemini API (Node.js https module) ────────────────────────────────────────
+const https = require('https');
+
 function callGemini({ prompt, systemPrompt, model = 'gemini-2.0-flash' }) {
   return new Promise((resolve, reject) => {
     const apiKey = process.env.GEMINI_API_KEY;
@@ -223,63 +224,64 @@ function callGemini({ prompt, systemPrompt, model = 'gemini-2.0-flash' }) {
 
     geminiAbort = false;
 
-    const body = JSON.stringify({
-      contents: [{ parts: [{ text: prompt }] }],
+    const bodyStr = JSON.stringify({
+      contents:          [{ parts: [{ text: prompt }] }],
       systemInstruction: { parts: [{ text: systemPrompt || '' }] },
-      generationConfig: { temperature: 0.3, maxOutputTokens: 1500 },
+      generationConfig:  { temperature: 0.3, maxOutputTokens: 1500 },
     });
 
-    const path = `/v1beta/models/${model}:generateContent?key=${apiKey}`;
-    log('GEMINI', `POST ${path.replace(/key=[^&]+/, 'key=***')}`);
+    const reqPath = `/v1beta/models/${model}:generateContent?key=${apiKey}`;
+    log('GEMINI', `POST ${reqPath.replace(/key=[^&]+/, 'key=***')}  bodyLen=${bodyStr.length}`);
 
     const options = {
       hostname: 'generativelanguage.googleapis.com',
       port:     443,
-      path,
+      path:     reqPath,
       method:   'POST',
-      headers:  {
+      headers: {
         'Content-Type':   'application/json',
-        'Content-Length': Buffer.byteLength(body),
+        'Content-Length': Buffer.byteLength(bodyStr),
       },
     };
 
-    const timer = setTimeout(() => {
-      req.destroy();
-      reject(new Error(`Gemini timed out after ${TIMEOUT_MS / 1000}s`));
-    }, TIMEOUT_MS);
+    let settled = false;
+    const done = (err, val) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      if (err) reject(err); else resolve(val);
+    };
 
-    const req = https.request(options, (res) => {
+    const timer = setTimeout(() => done(new Error(`Gemini timed out after ${TIMEOUT_MS / 1000}s`)), TIMEOUT_MS);
+
+    const req = https.request(options, res => {
       let raw = '';
-      res.on('data', chunk => { raw += chunk; });
+      res.on('data', chunk => { raw += chunk.toString(); });
       res.on('end', () => {
-        clearTimeout(timer);
-        if (geminiAbort) return reject(new Error('ABORTED'));
-        log('GEMINI', `status=${res.statusCode}  bytes=${raw.length}`);
+        if (geminiAbort) return done(new Error('ABORTED'));
+        log('GEMINI', `HTTP ${res.statusCode}  bytes=${raw.length}`);
+        log('GEMINI', `body[:300]: ${raw.slice(0, 300).replace(/\n/g, ' ')}`);
 
         let parsed;
         try { parsed = JSON.parse(raw); } catch {
-          return reject(new Error('Gemini returned non-JSON response'));
+          return done(new Error(`Gemini non-JSON (HTTP ${res.statusCode}): ${raw.slice(0, 200).replace(/\n/g, ' ')}`));
         }
-
         if (res.statusCode !== 200) {
-          const msg = parsed?.error?.message || `Gemini API error ${res.statusCode}`;
-          return reject(new Error(msg));
+          const msg = parsed?.error?.message || parsed?.error?.status || `Gemini error ${res.statusCode}`;
+          return done(new Error(`Gemini ${res.statusCode}: ${msg}`));
         }
-
         const text = parsed?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
-        if (!text) return reject(new Error('Gemini returned empty content'));
-        resolve(text);
+        if (!text) return done(new Error('Gemini returned empty content'));
+        done(null, text);
       });
     });
 
     req.on('error', err => {
-      clearTimeout(timer);
-      if (geminiAbort) return reject(new Error('ABORTED'));
-      log('GEMINI', 'request error:', err.message);
-      reject(new Error(`Gemini network error: ${err.message}`));
+      if (geminiAbort) return done(new Error('ABORTED'));
+      done(new Error(`Gemini network error: ${err.message}`));
     });
 
-    req.write(body);
+    req.write(bodyStr);
     req.end();
   });
 }
@@ -372,6 +374,7 @@ const server = http.createServer(async (req, res) => {
   if (req.method === 'POST' && req.url === '/api/gemini/abort') {
     log('HTTP', 'POST /api/gemini/abort');
     geminiAbort = true;
+    if (geminiProc) { try { geminiProc.kill('SIGTERM'); } catch {} geminiProc = null; }
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ aborted: true }));
     return;

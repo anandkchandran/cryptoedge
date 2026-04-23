@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useTheme } from '../contexts/ThemeContext';
 import useSurgingCryptos from '../hooks/useSurgingCryptos';
 
@@ -16,9 +16,68 @@ function fmtVol(v) {
   return `$${(v / 1e3).toFixed(0)}K`;
 }
 
+function CoinRow({ coin, isActive, onSelect, C }) {
+  const isGainer     = coin.change >= 0;
+  const changeColor  = isGainer ? C.bull : C.bear;
+  const activeColor  = isGainer ? C.bull : C.bear;
+
+  return (
+    <div
+      onClick={() => onSelect({ label: coin.label, id: coin.id, tv: coin.tv })}
+      style={{
+        display:       'flex',
+        flexDirection: 'column',
+        padding:       '7px 10px',
+        cursor:        'pointer',
+        borderLeft:    isActive ? `3px solid ${activeColor}` : '3px solid transparent',
+        background:    isActive ? `${activeColor}10` : 'transparent',
+        borderBottom:  `1px solid ${C.border}22`,
+        transition:    'background 0.12s',
+      }}
+      onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = `${C.muted}15`; }}
+      onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
+    >
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          <span style={{ fontSize: 8, color: C.muted, minWidth: 14 }}>#{coin.rank}</span>
+          <span style={{ fontFamily: "'Raleway', sans-serif", fontSize: 11, fontWeight: 700, color: isActive ? activeColor : C.bright }}>
+            {coin.label.replace('/USDT', '')}
+          </span>
+        </div>
+        <span className="mono" style={{ fontSize: 11, fontWeight: 600, color: changeColor }}>
+          {coin.change >= 0 ? '+' : ''}{coin.change.toFixed(2)}%
+        </span>
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 2 }}>
+        <span className="mono" style={{ fontSize: 9, color: C.text }}>${fmtPrice(coin.price)}</span>
+        <span className="mono" style={{ fontSize: 8, color: C.muted }}>{fmtVol(coin.volume)}</span>
+      </div>
+    </div>
+  );
+}
+
 export default function SurgingList({ currentSymbol, onSelect }) {
   const { colors: C } = useTheme();
-  const { surging, loading, error, lastRefresh, refresh } = useSurgingCryptos();
+  const { gainers, losers, loading, error, lastRefresh, refresh } = useSurgingCryptos();
+  const [tab, setTab] = useState('gainers'); // 'gainers' | 'losers'
+
+  const list = tab === 'gainers' ? gainers : losers;
+
+  const tabStyle = (active, color) => ({
+    flex:          1,
+    fontFamily:    "'Raleway', sans-serif",
+    fontSize:      10,
+    fontWeight:    700,
+    padding:       '5px 0',
+    border:        'none',
+    borderBottom:  active ? `2px solid ${color}` : `2px solid transparent`,
+    background:    'transparent',
+    color:         active ? color : C.muted,
+    cursor:        'pointer',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+    transition:    'all 0.15s',
+  });
 
   return (
     <div style={{
@@ -26,37 +85,40 @@ export default function SurgingList({ currentSymbol, onSelect }) {
       flexDirection: 'column',
       height:        '100%',
       background:    C.card,
-      borderRight:   `1px solid ${C.border}`,
     }}>
       {/* Header */}
       <div style={{
-        padding:      '10px 10px 8px',
+        padding:      '10px 10px 0',
         borderBottom: `1px solid ${C.border}`,
         background:   C.card,
         flexShrink:   0,
       }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
           <span style={{ fontFamily: "'Raleway', sans-serif", fontSize: 10, fontWeight: 700, color: C.bright, textTransform: 'uppercase', letterSpacing: 1 }}>
-            🔥 Surging
+            Markets
           </span>
           <button
             onClick={refresh}
             disabled={loading}
             title="Refresh list"
-            style={{
-              background: 'transparent',
-              border:     'none',
-              color:      C.muted,
-              fontSize:   12,
-              padding:    '1px 4px',
-            }}
+            style={{ background: 'transparent', border: 'none', color: C.muted, fontSize: 12, padding: '1px 4px', cursor: 'pointer' }}
           >
             ↻
           </button>
         </div>
-        <div style={{ fontFamily: "'Raleway', sans-serif", fontSize: 8, color: C.muted }}>Top 20 by 24h gain</div>
+
+        {/* Tabs */}
+        <div style={{ display: 'flex', gap: 0 }}>
+          <button style={tabStyle(tab === 'gainers', C.bull)} onClick={() => setTab('gainers')}>
+            ▲ Top Gainers
+          </button>
+          <button style={tabStyle(tab === 'losers', C.bear)} onClick={() => setTab('losers')}>
+            ▼ Top Losers
+          </button>
+        </div>
+
         {lastRefresh && (
-          <div style={{ fontFamily: "'Raleway', sans-serif", fontSize: 8, color: C.muted, marginTop: 2 }}>
+          <div style={{ fontFamily: "'Raleway', sans-serif", fontSize: 8, color: C.muted, padding: '3px 0 4px' }}>
             ↻ <span className="mono">{lastRefresh.toLocaleTimeString()}</span> · auto 1h
           </div>
         )}
@@ -65,61 +127,22 @@ export default function SurgingList({ currentSymbol, onSelect }) {
       {/* List body */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '4px 0' }}>
         {error && (
-          <div style={{ padding: '8px 10px', fontSize: 10, color: C.bear }}>
-            ⚠ {error}
-          </div>
+          <div style={{ padding: '8px 10px', fontSize: 10, color: C.bear }}>⚠ {error}</div>
         )}
-
-        {loading && !surging.length && (
+        {loading && !list.length && (
           <div style={{ padding: '16px 10px', textAlign: 'center', color: C.muted, fontSize: 10 }}>
             Loading…
           </div>
         )}
-
-        {surging.map(coin => {
-          const isActive = currentSymbol?.id === coin.id;
-          const changeColor = coin.change >= 0 ? C.bull : C.bear;
-
-          return (
-            <div
-              key={coin.id}
-              onClick={() => onSelect({ label: coin.label, id: coin.id, tv: coin.tv })}
-              style={{
-                display:       'flex',
-                flexDirection: 'column',
-                padding:       '7px 10px',
-                cursor:        'pointer',
-                borderLeft:    isActive ? `3px solid ${C.bull}` : '3px solid transparent',
-                background:    isActive ? `${C.bull}10` : 'transparent',
-                borderBottom:  `1px solid ${C.border}22`,
-                transition:    'background 0.12s',
-              }}
-              onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = `${C.muted}15`; }}
-              onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
-            >
-              {/* Row 1: rank + symbol + change */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                  <span style={{ fontSize: 8, color: C.muted, minWidth: 14 }}>#{coin.rank}</span>
-                  {/* Raleway for coin name */}
-                  <span style={{ fontFamily: "'Raleway', sans-serif", fontSize: 11, fontWeight: 700, color: isActive ? C.bull : C.bright }}>
-                    {coin.label.replace('/USDT', '')}
-                  </span>
-                </div>
-                {/* Mono for percentage change */}
-                <span className="mono" style={{ fontSize: 11, fontWeight: 600, color: changeColor }}>
-                  {coin.change >= 0 ? '+' : ''}{coin.change.toFixed(2)}%
-                </span>
-              </div>
-
-              {/* Row 2: price + volume — both monospace */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 2 }}>
-                <span className="mono" style={{ fontSize: 9, color: C.text }}>${fmtPrice(coin.price)}</span>
-                <span className="mono" style={{ fontSize: 8, color: C.muted }}>{fmtVol(coin.volume)}</span>
-              </div>
-            </div>
-          );
-        })}
+        {list.map(coin => (
+          <CoinRow
+            key={coin.id}
+            coin={coin}
+            isActive={currentSymbol?.id === coin.id}
+            onSelect={onSelect}
+            C={C}
+          />
+        ))}
       </div>
     </div>
   );
