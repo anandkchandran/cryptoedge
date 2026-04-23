@@ -1,7 +1,10 @@
 providers = ["node"]
 
+[variables]
+NODE_VERSION = "20.19.0"
+
 [phases.install]
-cmds = ["npm install --production"]
+cmds = ["npm install --omit=dev"]
 
 [start]
 cmd = "node server.js"

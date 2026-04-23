@@ -1,5 +1,5 @@
 [build]
-buildCommand = "npm install --production"
+buildCommand = "npm install --omit=dev"
 
 [deploy]
 startCommand = "node server.js"
