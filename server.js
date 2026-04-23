@@ -227,7 +227,12 @@ function callGemini({ prompt, systemPrompt, model = 'gemini-2.0-flash' }) {
     const bodyStr = JSON.stringify({
       contents:          [{ parts: [{ text: prompt }] }],
       systemInstruction: { parts: [{ text: systemPrompt || '' }] },
-      generationConfig:  { temperature: 0.3, maxOutputTokens: 1500, responseMimeType: 'application/json' },
+      generationConfig:  {
+        temperature:      0.3,
+        maxOutputTokens:  1500,
+        responseMimeType: 'application/json',
+        thinkingConfig:   { thinkingBudget: 0 },   // disable thinking tokens for structured JSON
+      },
     });
 
     const reqPath = `/v1beta/models/${model}:generateContent?key=${apiKey}`;
@@ -270,7 +275,12 @@ function callGemini({ prompt, systemPrompt, model = 'gemini-2.0-flash' }) {
           const msg = parsed?.error?.message || parsed?.error?.status || `Gemini error ${res.statusCode}`;
           return done(new Error(`Gemini ${res.statusCode}: ${msg}`));
         }
-        const text = parsed?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+        const parts = parsed?.candidates?.[0]?.content?.parts ?? [];
+        // Skip 'thought' parts (thinking tokens); grab first real text part
+        const text = parts.find(p => p.text && !p.thought)?.text
+                  ?? parts.find(p => p.text)?.text
+                  ?? '';
+        log('GEMINI', `parts=${parts.length}  textLen=${text.length}  preview=${text.slice(0,120).replace(/\n/g,' ')}`);
         if (!text) return done(new Error('Gemini returned empty content'));
         done(null, text);
       });
