@@ -19,7 +19,7 @@
     "test": "react-scripts test",
     "eject": "react-scripts eject",
     "server": "node server.js",
-    "predeploy": "DISABLE_ESLINT_PLUGIN=true npm run build",
+    "predeploy": "DISABLE_ESLINT_PLUGIN=true REACT_APP_API_URL=$RAILWAY_URL npm run build",
     "deploy": "bash deploy.sh"
   },
   "eslintConfig": {
