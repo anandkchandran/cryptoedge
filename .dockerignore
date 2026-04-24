@@ -1,0 +1,9 @@
+node_modules
+build
+src
+public
+.env
+.env.*
+*.log
+react-scripts
+package-lock.json

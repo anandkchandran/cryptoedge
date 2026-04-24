@@ -19,8 +19,9 @@
     "test": "react-scripts test",
     "eject": "react-scripts eject",
     "server": "node server.js",
-    "predeploy": "DISABLE_ESLINT_PLUGIN=true REACT_APP_API_URL=https://thakc-cryptoedge.up.railway.app npm run build",
-    "deploy": "bash deploy.sh"
+    "predeploy": "DISABLE_ESLINT_PLUGIN=true REACT_APP_API_URL=$GCP_URL npm run build",
+    "deploy": "bash deploy.sh",
+    "deploy:gcp": "gcloud run deploy cryptoedge --source . --region us-central1 --allow-unauthenticated --set-env-vars NODE_ENV=production,GEMINI_API_KEY=$GEMINI_API_KEY"
   },
   "eslintConfig": {
     "extends": [
