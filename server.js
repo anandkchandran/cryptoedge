@@ -370,8 +370,11 @@ function callGrok({ prompt, systemPrompt, model = 'grok-3' }) {
 }
 
 // ── HTTP server ───────────────────────────────────────────────────────────────
-// Allowed origins: comma-separated list in ALLOWED_ORIGINS env var,
-// or defaults that cover local dev + GitHub Pages.
+// In production (Railway) use wildcard CORS — the API keys live server-side
+// so there is no credential exposure risk from open CORS.
+// In local dev restrict to localhost only.
+const IS_PROD = process.env.NODE_ENV === 'production';
+
 const ALLOWED_ORIGINS = new Set(
   (process.env.ALLOWED_ORIGINS || [
     'http://localhost:3000',
@@ -381,11 +384,16 @@ const ALLOWED_ORIGINS = new Set(
 );
 
 function setCors(res, reqOrigin) {
-  const origin = ALLOWED_ORIGINS.has(reqOrigin) ? reqOrigin : [...ALLOWED_ORIGINS][0];
-  res.setHeader('Access-Control-Allow-Origin',  origin);
+  if (IS_PROD) {
+    // Allow any origin in production — Railway is the secret-keeper, not the browser
+    res.setHeader('Access-Control-Allow-Origin',  '*');
+  } else {
+    const origin = ALLOWED_ORIGINS.has(reqOrigin) ? reqOrigin : [...ALLOWED_ORIGINS][0];
+    res.setHeader('Access-Control-Allow-Origin',  origin);
+    res.setHeader('Vary', 'Origin');
+  }
   res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  res.setHeader('Vary', 'Origin');
 }
 
 function readBody(req) {
