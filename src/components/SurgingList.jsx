@@ -24,12 +24,14 @@ function CoinRow({ coin, isActive, onSelect, C }) {
     <div
       onClick={() => onSelect({ label: coin.label, id: coin.id, tv: coin.isFutures ? coin.tvFutures : coin.tv })}
       style={{
-        padding:      '9px 12px',
-        cursor:       'pointer',
-        borderLeft:   isActive ? `3px solid ${changeColor}` : '3px solid transparent',
-        background:   isActive ? `${changeColor}12` : 'transparent',
-        borderBottom: `1px solid ${C.border}30`,
-        transition:   'background 0.12s',
+        padding:       '9px 12px',
+        cursor:        'pointer',
+        borderLeft:    isActive ? `3px solid ${changeColor}` : '3px solid transparent',
+        background:    isActive ? `${changeColor}12` : 'transparent',
+        borderBottom:  `1px solid ${C.border}30`,
+        transition:    'background 0.12s',
+        touchAction:   'manipulation',
+        WebkitTapHighlightColor: 'transparent',
       }}
       onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = `${C.muted}12`; }}
       onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}

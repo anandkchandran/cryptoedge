@@ -10,6 +10,11 @@
   box-sizing: border-box;
 }
 
+/* Prevent double-tap zoom on all interactive elements */
+button, a, [role="button"], select, input, label, div[onClick], div[onclick] {
+  touch-action: manipulation;
+}
+
 /* Skeleton sets bottom margins on many elements — reset them inside the app */
 button, .button { margin-bottom: 0; }
 input, select, textarea, fieldset { margin-bottom: 0; }
