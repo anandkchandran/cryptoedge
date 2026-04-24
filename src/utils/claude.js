@@ -8,7 +8,7 @@
  */
 
 const PROXY_URL = 'http://localhost:3001/api/claude';
-const MODEL     = 'claude-sonnet-4-5';
+const MODEL     = 'claude-sonnet-4-6';
 
 // ── Prompt builder ────────────────────────────────────────────────────────────
 // How many candles to send based on timeframe — more context on lower TFs

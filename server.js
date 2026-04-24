@@ -76,7 +76,7 @@ function proxyAvailable(port) {
 }
 
 // ── Spawn claude CLI ──────────────────────────────────────────────────────────
-function callClaude({ prompt, systemPrompt, model = 'claude-sonnet-4-5' }, useProxy) {
+function callClaude({ prompt, systemPrompt, model = 'claude-sonnet-4-6' }, useProxy) {
   return new Promise((resolve, reject) => {
     if (activeProcess) {
       log('WARN', 'Killing leftover process');
@@ -125,9 +125,8 @@ function callClaude({ prompt, systemPrompt, model = 'claude-sonnet-4-5' }, usePr
     log('START', `id=${id}  proxy=${useProxy ? `localhost:${COWORK_PROXY_PORT}` : 'none'}`);
     log('START', `bin=${claudeBin}  chars=${fullPrompt.length}`);
 
-    // No --model flag — let the locally installed claude use its default model.
-    // This avoids model-name mismatches between CLI versions and the Anthropic API.
-    const proc = spawn(claudeBin, ['-p', '--output-format', 'json'], {
+    // Pass --model explicitly so the CLI doesn't fall back to a beta/nonexistent model.
+    const proc = spawn(claudeBin, ['-p', '--output-format', 'json', '--model', model], {
       stdio: ['pipe', 'pipe', 'pipe'],
       env,
     });
