@@ -339,19 +339,101 @@ hr { margin: 10px 0; }
 
 /* ── Responsive ──────────────────────────────────────────────────────────── */
 
-@media (max-width: 860px) {
-  .main-row { flex-direction: column; }
-  .main-row .col-surge { display: none; }
+@media (max-width: 1100px) {
+  .main-row .col-surge  { width: 160px; }
+  .main-row .col-signal { width: 280px; }
+}
+
+/* ── Mobile layout (<= 768px) ────────────────────────────────────────────── */
+
+@media (max-width: 768px) {
+
+  /* Stack columns; each tab panel is full-width */
+  .main-row {
+    flex-direction: column;
+    padding-bottom: 56px; /* room for fixed tab bar */
+  }
+
+  /* All columns hidden by default — tab JS adds .mob-active */
+  .main-row .col-surge,
   .main-row .col-chart,
   .main-row .col-signal {
+    display: none;
     width: 100%;
-    padding: 8px 10px;
     max-height: none;
+    padding: 8px 10px;
+    border-right: none;
+    overflow-y: visible;
+    position: static;
+  }
+
+  .main-row .col-surge.mob-active,
+  .main-row .col-chart.mob-active,
+  .main-row .col-signal.mob-active {
+    display: block;
+  }
+
+  /* SurgingList needs an explicit height when shown as a tab */
+  .main-row .col-surge.mob-active {
+    height: calc(100vh - 130px);
+    overflow-y: auto;
+  }
+
+  /* TickerRow — horizontal scroll already works; reduce font */
+  .ticker-hero-price { font-size: 20px !important; }
+
+  /* Signal column widget spacing */
+  .main-row .col-signal.mob-active > * {
+    margin-bottom: 8px;
+  }
+
+  /* Make 2-col indicator grid single col on very small screens */
+  .ind-grid-2col {
+    grid-template-columns: 1fr 1fr !important;
   }
 }
-@media (max-width: 1100px) {
-  .main-row .col-surge { width: 160px; }
-  .main-row .col-signal { width: 300px; }
+
+/* ── Mobile bottom tab bar ───────────────────────────────────────────────── */
+
+.mob-tabbar {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .mob-tabbar {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 300;
+    height: 54px;
+    border-top: 1px solid;
+  }
+
+  .mob-tabbar__btn {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    font-family: 'Raleway', sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+    border: none;
+    border-radius: 0;
+    padding: 0;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+  }
+
+  .mob-tabbar__icon {
+    font-size: 18px;
+    line-height: 1;
+  }
 }
 
 /* ── Claude animations ───────────────────────────────────────────────────── */

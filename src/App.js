@@ -105,12 +105,47 @@ function MarketToggle({ market, onChange, C }) {
   );
 }
 
+// ── Mobile tab bar ────────────────────────────────────────────────────────────
+const MOB_TABS = [
+  { id: 'chart',   icon: '📊', label: 'Chart'   },
+  { id: 'signal',  icon: '📈', label: 'Signal'  },
+  { id: 'markets', icon: '🔥', label: 'Markets' },
+];
+
+function MobileTabBar({ active, onChange, C }) {
+  return (
+    <nav
+      className="mob-tabbar"
+      style={{ background: C.card, borderColor: C.border }}
+    >
+      {MOB_TABS.map(t => {
+        const isActive = active === t.id;
+        return (
+          <button
+            key={t.id}
+            className="mob-tabbar__btn"
+            onClick={() => onChange(t.id)}
+            style={{
+              background: isActive ? `${C.bull}18` : C.card,
+              color:      isActive ? C.bull        : C.muted,
+            }}
+          >
+            <span className="mob-tabbar__icon">{t.icon}</span>
+            {t.label}
+          </button>
+        );
+      })}
+    </nav>
+  );
+}
+
 // ── Main app ──────────────────────────────────────────────────────────────────
 function AppInner() {
   const [symbol,    setSymbol]    = useState(SYMBOLS[0]);
   const [timeframe, setTimeframe] = useState(TIMEFRAMES[3]); // 1h default
   const [view,      setView]      = useState('indicators');
   const [market,    setMarket]    = useState('spot');         // 'spot' | 'futures'
+  const [mobTab,    setMobTab]    = useState('chart');        // mobile active tab
 
   const { colors: C } = useTheme();
 
@@ -174,12 +209,13 @@ function AppInner() {
             <div className="main-row">
 
               {/* Left: Surging list */}
-              <div className="col-surge" style={{ borderRight: `1px solid ${C.border}` }}>
-                <SurgingList currentSymbol={symbol} onSelect={setSymbol} />
+              <div className={`col-surge${mobTab === 'markets' ? ' mob-active' : ''}`}
+                style={{ borderRight: `1px solid ${C.border}` }}>
+                <SurgingList currentSymbol={symbol} onSelect={(s) => { setSymbol(s); setMobTab('chart'); }} />
               </div>
 
-              {/* Centre: Charts — with Spot/Futures toggle at the top */}
-              <div className="col-chart">
+              {/* Centre: Charts */}
+              <div className={`col-chart${mobTab === 'chart' ? ' mob-active' : ''}`}>
                 <MarketToggle market={market} onChange={setMarket} C={C} />
 
                 {view === 'tradingview'
@@ -195,7 +231,7 @@ function AppInner() {
               </div>
 
               {/* Right: Signal */}
-              <div className="col-signal">
+              <div className={`col-signal${mobTab === 'signal' ? ' mob-active' : ''}`}>
                 <SignalCard      signal={signal} market={market} />
                 <SignalBreakdown signal={signal} />
                 <IndicatorValues inds={inds} candles={candles} />
@@ -229,6 +265,9 @@ function AppInner() {
 
             </div>
           </div>
+
+          {/* ── Mobile bottom tab bar ── */}
+          <MobileTabBar active={mobTab} onChange={setMobTab} C={C} />
         </>
       )}
     </div>
