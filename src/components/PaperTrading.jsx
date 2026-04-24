@@ -51,11 +51,11 @@ function priceDecimals(p) { return p > 1000 ? 2 : p > 10 ? 4 : 6; }
 function LeverageButton({ val, active, onClick, C }) {
   return (
     <button onClick={() => onClick(val)} style={{
-      fontFamily: "'Raleway', sans-serif", fontWeight: 700, fontSize: 10,
-      height: 26, padding: '0 8px', borderRadius: 4, boxSizing: 'border-box',
-      border:  `1px solid ${active ? '#7c6bfa60' : C.border}`,
-      background: active ? '#7c6bfa18' : 'transparent',
-      color:   active ? '#7c6bfa' : C.muted,
+      fontFamily: "'Raleway', sans-serif", fontWeight: 700, fontSize: 11,
+      height: 28, padding: '0 10px', borderRadius: 4, boxSizing: 'border-box',
+      border:     `1px solid ${active ? '#7c6bfa80' : C.border}`,
+      background:  active ? '#7c6bfa22' : `${C.border}30`,
+      color:       active ? '#b4a8ff'   : C.text,
       cursor: 'pointer', transition: 'all 0.12s',
     }}>
       {val}×
@@ -211,7 +211,7 @@ export default function PaperTrading({ ticker, symbol }) {
   const snap = useRef({ balance, positions, history });
   useEffect(() => { snap.current = { balance, positions, history }; }, [balance, positions, history]);
 
-  // Load persisted state
+  // Load persisted state (once on mount)
   useEffect(() => {
     const saved = loadState();
     if (saved) {
@@ -220,6 +220,11 @@ export default function PaperTrading({ ticker, symbol }) {
       setHistory(saved.history    ?? []);
     }
   }, []);
+
+  // Auto-save on any state change (belt-and-suspenders alongside explicit persist() calls)
+  useEffect(() => {
+    saveState(balance, positions, history);
+  }, [balance, positions, history]);
 
   const currentPrice = ticker?.price;
   const pd           = priceDecimals(currentPrice || 1);
@@ -460,10 +465,10 @@ export default function PaperTrading({ ticker, symbol }) {
                 <button key={pct}
                   onClick={() => setSize((balance * pct / 100).toFixed(2))}
                   style={{
-                    fontFamily: "'Raleway', sans-serif", fontSize: 9, fontWeight: 700,
-                    height: 30, padding: '0 8px', borderRadius: 4, boxSizing: 'border-box',
-                    border: `1px solid ${C.border}`, background: 'transparent',
-                    color: C.muted, cursor: 'pointer',
+                    fontFamily: "'Raleway', sans-serif", fontSize: 11, fontWeight: 700,
+                    height: 30, padding: '0 9px', borderRadius: 4, boxSizing: 'border-box',
+                    border: `1px solid ${C.border}`, background: `${C.border}30`,
+                    color: C.text, cursor: 'pointer',
                   }}>
                   {pct}%
                 </button>
@@ -473,7 +478,7 @@ export default function PaperTrading({ ticker, symbol }) {
 
           {/* Leverage */}
           <div style={{ marginBottom: 10 }}>
-            <div style={{ fontFamily: "'Raleway', sans-serif", fontSize: 9, color: C.muted, marginBottom: 4 }}>Leverage</div>
+            <div style={{ fontFamily: "'Raleway', sans-serif", fontSize: 10, fontWeight: 700, color: C.text, marginBottom: 5, textTransform: 'uppercase', letterSpacing: 0.6 }}>Leverage</div>
             <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
               {LEVERAGE_OPTIONS.map(l => (
                 <LeverageButton key={l} val={l} active={leverage === l} onClick={setLeverage} C={C} />

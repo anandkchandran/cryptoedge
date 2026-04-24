@@ -6,7 +6,7 @@ export const DARK = {
   bg:      '#0b0f1a',
   card:    '#101520',
   border:  '#1c2740',
-  muted:   '#3a5270',
+  muted:   '#6a8aaa',
   text:    '#b8cce0',
   bright:  '#ddeeff',
   price:   '#3b82f6',

@@ -63,9 +63,9 @@ function Row({ label, value, color }) {
       border:         `1px solid ${color}22`,
     }}>
       {/* Raleway label */}
-      <span style={{ fontFamily: "'Raleway', sans-serif", fontSize: 11, color: C.muted }}>{label}</span>
+      <span style={{ fontFamily: "'Raleway', sans-serif", fontSize: 12, color: C.text }}>{label}</span>
       {/* Roboto Mono value */}
-      <span className="mono" style={{ fontSize: 12, fontWeight: 600, color }}>{value}</span>
+      <span className="mono" style={{ fontSize: 13, fontWeight: 600, color }}>{value}</span>
     </div>
   );
 }
@@ -208,8 +208,8 @@ export function SignalBreakdown({ signal }) {
             }}
           >
             <div>
-              <div style={{ fontFamily: "'Raleway', sans-serif", fontSize: 9, fontWeight: 700, color: C.muted, marginBottom: 2, textTransform: 'uppercase', letterSpacing: 0.8 }}>{s.indicator}</div>
-              <div style={{ fontFamily: "'Raleway', sans-serif", fontSize: 11, color: C.bright }}>{s.message}</div>
+              <div style={{ fontFamily: "'Raleway', sans-serif", fontSize: 10, fontWeight: 700, color: C.text, marginBottom: 2, textTransform: 'uppercase', letterSpacing: 0.8 }}>{s.indicator}</div>
+              <div style={{ fontFamily: "'Raleway', sans-serif", fontSize: 12, color: C.bright }}>{s.message}</div>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginLeft: 10 }}>
               <span style={{ fontSize: 14, color: sigColor(s.type, C) }}>{sigIcon(s.type)}</span>
@@ -262,8 +262,8 @@ export function IndicatorValues({ inds, candles }) {
             padding:      '7px 10px',
             border:       `1px solid ${C.border}`,
           }}>
-            <div style={{ fontFamily: "'Raleway', sans-serif", fontSize: 9, fontWeight: 700, color: C.muted, marginBottom: 2, textTransform: 'uppercase', letterSpacing: 0.6 }}>{label}</div>
-            <div className="mono" style={{ fontSize: 12, fontWeight: 600, color }}>{value ?? '—'}</div>
+            <div style={{ fontFamily: "'Raleway', sans-serif", fontSize: 10, fontWeight: 700, color: C.text, marginBottom: 3, textTransform: 'uppercase', letterSpacing: 0.6 }}>{label}</div>
+            <div className="mono" style={{ fontSize: 13, fontWeight: 600, color }}>{value ?? '—'}</div>
           </div>
         ))}
       </div>
