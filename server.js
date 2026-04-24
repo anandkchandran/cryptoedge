@@ -76,7 +76,7 @@ function proxyAvailable(port) {
 }
 
 // ── Spawn claude CLI ──────────────────────────────────────────────────────────
-function callClaude({ prompt, systemPrompt, model = 'claude-sonnet-4-6' }, useProxy) {
+function callClaude({ prompt, systemPrompt, model = 'sonnet' }, useProxy) {
   return new Promise((resolve, reject) => {
     if (activeProcess) {
       log('WARN', 'Killing leftover process');
@@ -110,7 +110,8 @@ function callClaude({ prompt, systemPrompt, model = 'claude-sonnet-4-6' }, usePr
 
     const env = {
       ...process.env,
-      PATH: augmentedPath,
+      PATH:            augmentedPath,
+      ANTHROPIC_MODEL: model,   // some CLI versions read this env var instead of --model
       ...proxyEnv,
     };
 
