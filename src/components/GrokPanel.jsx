@@ -214,6 +214,7 @@ export default function GrokPanel({ symbol, timeframe, ticker, inds, signal, can
     abortRef.current = false;
     setLoading(true);
     setError(null);
+    setResult(null);
     try {
       const res = await getGrokAnalysis({ symbol: sym, timeframe: tf, ticker: tkr, inds: ids, signal: sig, candles: cnd, market: mkt }, mdl);
       if (!abortRef.current) setResult(res);

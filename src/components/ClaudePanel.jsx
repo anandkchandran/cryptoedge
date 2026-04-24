@@ -217,6 +217,7 @@ export default function ClaudePanel({ symbol, timeframe, ticker, inds, signal, c
     abortCtrl.current = new AbortController();
     setLoading(true);
     setError(null);
+    setResult(null);
     try {
       const res = await getClaudeAnalysis(
         { symbol, timeframe, ticker, inds, signal, candles, market },

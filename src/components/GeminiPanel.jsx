@@ -246,6 +246,7 @@ export default function GeminiPanel({ symbol, timeframe, ticker, inds, signal, c
   const runAnalysis = useCallback(async (sym, tf, tkr, ids, sig, cnd, mkt, mdl) => {
     setLoading(true);
     setError(null);
+    setResult(null);
     setRetryIn(null);
     try {
       const res = await getGeminiAnalysis({ symbol: sym, timeframe: tf, ticker: tkr, inds: ids, signal: sig, candles: cnd, market: mkt }, mdl);
