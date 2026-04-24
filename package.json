@@ -27,13 +27,19 @@
     ]
   },
   "overrides": {
-    "ajv": "^8.11.0",
+    "babel-loader": {
+      "schema-utils": "2.7.1"
+    },
+    "eslint-webpack-plugin": {
+      "ajv": "6.12.6",
+      "ajv-keywords": "3.5.2"
+    },
     "fork-ts-checker-webpack-plugin": {
       "ajv": "6.12.6"
     }
   },
   "engines": {
-    "node": "20.x",
+    "node": ">=18.0.0",
     "npm": ">=10.0.0"
   },
   "browserslist": {

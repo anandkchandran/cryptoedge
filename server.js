@@ -9,6 +9,7 @@
  */
 
 const http   = require('http');
+const https  = require('https');
 const net    = require('net');
 const tls    = require('tls');
 const { spawn, execSync } = require('child_process');
@@ -31,9 +32,8 @@ function log(tag, ...args) {
 }
 
 // ── State ─────────────────────────────────────────────────────────────────────
-let activeProcess  = null;
-let geminiAbort    = false;   // simple flag to abort pending Gemini request
-let groqAbort      = false;   // simple flag to abort pending Groq request
+let activeProcess = null;
+let geminiAbort   = false;
 
 // ── Find claude binary ────────────────────────────────────────────────────────
 function findClaude() {
@@ -215,79 +215,9 @@ function callClaude({ prompt, systemPrompt, model = 'claude-sonnet-4-5' }, usePr
   });
 }
 
-// ── Gemini API (Node.js https module) ────────────────────────────────────────
-const https = require('https');
 
-function callGroq({ prompt, systemPrompt, model = 'llama-3.3-70b-versatile' }) {
-  return new Promise((resolve, reject) => {
-    const apiKey = process.env.GROQ_API_KEY;
-    if (!apiKey) return reject(new Error('GROQ_API_KEY is not set — add it to your Railway environment'));
-
-    groqAbort = false;
-
-    const messages = [];
-    if (systemPrompt) messages.push({ role: 'system', content: systemPrompt });
-    messages.push({ role: 'user', content: prompt });
-
-    const bodyStr = JSON.stringify({ model, messages, temperature: 0.3, max_tokens: 1500 });
-
-    log('GROQ', `POST /openai/v1/chat/completions  model=${model}  bodyLen=${bodyStr.length}`);
-
-    const options = {
-      hostname: 'api.groq.com',
-      port:     443,
-      path:     '/openai/v1/chat/completions',
-      method:   'POST',
-      headers: {
-        'Content-Type':   'application/json',
-        'Authorization':  `Bearer ${apiKey}`,
-        'Content-Length': Buffer.byteLength(bodyStr),
-      },
-    };
-
-    let settled = false;
-    const done = (err, val) => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timer);
-      if (err) reject(err); else resolve(val);
-    };
-
-    const timer = setTimeout(() => done(new Error(`Groq timed out after ${TIMEOUT_MS / 1000}s`)), TIMEOUT_MS);
-
-    const req = https.request(options, res => {
-      let raw = '';
-      res.on('data', chunk => { raw += chunk.toString(); });
-      res.on('end', () => {
-        if (groqAbort) return done(new Error('ABORTED'));
-        log('GROQ', `HTTP ${res.statusCode}  bytes=${raw.length}`);
-
-        let parsed;
-        try { parsed = JSON.parse(raw); } catch {
-          return done(new Error(`Groq non-JSON (HTTP ${res.statusCode}): ${raw.slice(0, 200)}`));
-        }
-        if (res.statusCode !== 200) {
-          const msg = parsed?.error?.message || `Groq error ${res.statusCode}`;
-          return done(new Error(`Groq ${res.statusCode}: ${msg}`));
-        }
-        const text = parsed?.choices?.[0]?.message?.content ?? '';
-        log('GROQ', `textLen=${text.length}  preview=${text.slice(0, 120).replace(/\n/g, ' ')}`);
-        if (!text) return done(new Error('Groq returned empty content'));
-        done(null, text);
-      });
-    });
-
-    req.on('error', err => {
-      if (groqAbort) return done(new Error('ABORTED'));
-      done(new Error(`Groq network error: ${err.message}`));
-    });
-
-    req.write(bodyStr);
-    req.end();
-  });
-}
-
-function callGemini({ prompt, systemPrompt, model = 'gemini-2.0-flash' }) {
+// ── Gemini API ────────────────────────────────────────────────────────────────
+function callGemini({ prompt, systemPrompt, model = 'gemini-2.5-flash' }) {
   return new Promise((resolve, reject) => {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) return reject(new Error('GEMINI_API_KEY is not set — add it to your environment'));
@@ -301,7 +231,7 @@ function callGemini({ prompt, systemPrompt, model = 'gemini-2.0-flash' }) {
         temperature:      0.3,
         maxOutputTokens:  1500,
         responseMimeType: 'application/json',
-        thinkingConfig:   { thinkingBudget: 0 },   // disable thinking tokens for structured JSON
+        thinkingConfig:   { thinkingBudget: 0 },
       },
     });
 
@@ -335,22 +265,20 @@ function callGemini({ prompt, systemPrompt, model = 'gemini-2.0-flash' }) {
       res.on('end', () => {
         if (geminiAbort) return done(new Error('ABORTED'));
         log('GEMINI', `HTTP ${res.statusCode}  bytes=${raw.length}`);
-        log('GEMINI', `body[:300]: ${raw.slice(0, 300).replace(/\n/g, ' ')}`);
 
         let parsed;
         try { parsed = JSON.parse(raw); } catch {
-          return done(new Error(`Gemini non-JSON (HTTP ${res.statusCode}): ${raw.slice(0, 200).replace(/\n/g, ' ')}`));
+          return done(new Error(`Gemini non-JSON (HTTP ${res.statusCode}): ${raw.slice(0, 200)}`));
         }
         if (res.statusCode !== 200) {
           const msg = parsed?.error?.message || parsed?.error?.status || `Gemini error ${res.statusCode}`;
           return done(new Error(`Gemini ${res.statusCode}: ${msg}`));
         }
         const parts = parsed?.candidates?.[0]?.content?.parts ?? [];
-        // Skip 'thought' parts (thinking tokens); grab first real text part
-        const text = parts.find(p => p.text && !p.thought)?.text
-                  ?? parts.find(p => p.text)?.text
-                  ?? '';
-        log('GEMINI', `parts=${parts.length}  textLen=${text.length}  preview=${text.slice(0,120).replace(/\n/g,' ')}`);
+        const text  = parts.find(p => p.text && !p.thought)?.text
+                   ?? parts.find(p => p.text)?.text
+                   ?? '';
+        log('GEMINI', `parts=${parts.length}  textLen=${text.length}  preview=${text.slice(0, 120).replace(/\n/g, ' ')}`);
         if (!text) return done(new Error('Gemini returned empty content'));
         done(null, text);
       });
@@ -405,7 +333,7 @@ const server = http.createServer(async (req, res) => {
     const claudeBinCheck = findClaude();
     try { fs.accessSync(claudeBinCheck, fs.constants.X_OK); } catch {
       res.writeHead(503, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: 'Claude AI is only available when running locally — use Gemini for cloud deployments.' }));
+      res.end(JSON.stringify({ error: 'Claude AI requires the claude CLI — run "node server.js" locally.' }));
       return;
     }
     try {
@@ -469,36 +397,10 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // POST /api/groq
-  if (req.method === 'POST' && req.url === '/api/groq') {
-    log('HTTP', 'POST /api/groq');
-    try {
-      const body    = await readBody(req);
-      const content = await callGroq(body);
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ content }));
-    } catch (err) {
-      const aborted = err.message === 'ABORTED';
-      res.writeHead(aborted ? 499 : 500, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: err.message }));
-    }
-    return;
-  }
-
-  // POST /api/groq/abort
-  if (req.method === 'POST' && req.url === '/api/groq/abort') {
-    log('HTTP', 'POST /api/groq/abort');
-    groqAbort = true;
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ aborted: true }));
-    return;
-  }
-
   // POST /api/gemini/abort
   if (req.method === 'POST' && req.url === '/api/gemini/abort') {
     log('HTTP', 'POST /api/gemini/abort');
     geminiAbort = true;
-    if (geminiProc) { try { geminiProc.kill('SIGTERM'); } catch {} geminiProc = null; }
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ aborted: true }));
     return;

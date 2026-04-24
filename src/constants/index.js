@@ -11,6 +11,7 @@ export const SYMBOLS = [
   { label: 'AVAX/USDT',  id: 'AVAXUSDT',  tv: 'BINANCE:AVAXUSDT',  tvFutures: 'BINANCE:AVAXUSDTPERP'  },
   { label: 'MATIC/USDT', id: 'MATICUSDT', tv: 'BINANCE:MATICUSDT', tvFutures: 'BINANCE:MATICUSDTPERP' },
   { label: 'DOT/USDT',   id: 'DOTUSDT',   tv: 'BINANCE:DOTUSDT',   tvFutures: 'BINANCE:DOTUSDTPERP'   },
+  { label: 'DASH/USDT',  id: 'DASHUSDT',  tv: 'BINANCE:DASHUSDT',  tvFutures: 'BINANCE:DASHUSDTPERP'  },
 ];
 
 export const TIMEFRAMES = [

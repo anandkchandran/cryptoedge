@@ -8,8 +8,6 @@ const G_BLUE   = '#4285f4';
 const G_RED    = '#ea4335';
 const G_YELLOW = '#fbbc05';
 const G_GREEN  = '#34a853';
-
-// Cycle through Google colours for the loading dots
 const DOT_COLORS = [G_BLUE, G_RED, G_YELLOW, G_GREEN];
 
 const sigColor = (s) => {
@@ -43,7 +41,6 @@ const SectionTitle = ({ children }) => {
   );
 };
 
-// Google-coloured ◆ logo mark
 function GeminiLogo({ size = 16 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
@@ -60,7 +57,7 @@ function GeminiLogo({ size = 16 }) {
   );
 }
 
-function AnalysisResult({ result, market = 'spot' }) {
+function AnalysisResult({ result }) {
   const { colors: C } = useTheme();
   if (!result) return null;
 
@@ -73,7 +70,6 @@ function AnalysisResult({ result, market = 'spot' }) {
 
   return (
     <div>
-      {/* Signal + confidence */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
         <div style={{
           fontFamily: "'Raleway', sans-serif", fontSize: 22, fontWeight: 800,
@@ -91,7 +87,6 @@ function AnalysisResult({ result, market = 'spot' }) {
         </div>
       </div>
 
-      {/* Algo agreement */}
       {agree && (
         <div style={{
           fontFamily: "'Raleway', sans-serif", fontSize: 10,
@@ -102,7 +97,6 @@ function AnalysisResult({ result, market = 'spot' }) {
         </div>
       )}
 
-      {/* Summary */}
       {result.summary && (
         <>
           <SectionTitle>Summary</SectionTitle>
@@ -114,7 +108,6 @@ function AnalysisResult({ result, market = 'spot' }) {
 
       <Divider />
 
-      {/* Trade setup */}
       {sig !== 'HOLD' && trade.entry && (
         <>
           <SectionTitle>Trade Setup</SectionTitle>
@@ -137,20 +130,18 @@ function AnalysisResult({ result, market = 'spot' }) {
           </div>
 
           <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
-            <div style={{ flex: 1, background: C.bg, borderRadius: 4, padding: '6px 8px', border: `1px solid ${C.border}` }}>
-              <div style={{ fontFamily: "'Raleway', sans-serif", fontSize: 8, color: C.muted, marginBottom: 2 }}>Risk:Reward</div>
-              <div className="mono" style={{ fontSize: 11, fontWeight: 700, color: G_BLUE }}>{trade.risk_reward || '—'}</div>
-            </div>
-            <div style={{ flex: 1, background: C.bg, borderRadius: 4, padding: '6px 8px', border: `1px solid ${C.border}` }}>
-              <div style={{ fontFamily: "'Raleway', sans-serif", fontSize: 8, color: C.muted, marginBottom: 2 }}>Time Horizon</div>
-              <div style={{ fontFamily: "'Raleway', sans-serif", fontSize: 10, color: C.text }}>{trade.time_horizon || '—'}</div>
-            </div>
-            <div style={{ flex: 1, background: C.bg, borderRadius: 4, padding: '6px 8px', border: `1px solid ${C.border}` }}>
-              <div style={{ fontFamily: "'Raleway', sans-serif", fontSize: 8, color: C.muted, marginBottom: 2 }}>Sizing</div>
-              <div style={{ fontFamily: "'Raleway', sans-serif", fontSize: 9, color: C.text }}>
-                {(result.position_sizing || '—').split('—')[0].trim()}
+            {[
+              { label: 'Risk:Reward', value: trade.risk_reward || '—', mono: true, color: G_BLUE },
+              { label: 'Time Horizon', value: trade.time_horizon || '—' },
+              { label: 'Sizing', value: (result.position_sizing || '—').split('—')[0].trim() },
+            ].map(({ label, value, mono, color }) => (
+              <div key={label} style={{ flex: 1, background: C.bg, borderRadius: 4, padding: '6px 8px', border: `1px solid ${C.border}` }}>
+                <div style={{ fontFamily: "'Raleway', sans-serif", fontSize: 8, color: C.muted, marginBottom: 2 }}>{label}</div>
+                <div className={mono ? 'mono' : undefined} style={{ fontSize: mono ? 11 : 10, fontWeight: mono ? 700 : 400, color: color || C.text }}>
+                  {value}
+                </div>
               </div>
-            </div>
+            ))}
           </div>
 
           {trade.entry_note && (
@@ -163,7 +154,6 @@ function AnalysisResult({ result, market = 'spot' }) {
 
       <Divider />
 
-      {/* Key reasons */}
       {result.key_reasons?.length > 0 && (
         <>
           <SectionTitle>Key Reasons</SectionTitle>
@@ -182,7 +172,6 @@ function AnalysisResult({ result, market = 'spot' }) {
         </>
       )}
 
-      {/* Risks */}
       {result.risks?.length > 0 && (
         <>
           <SectionTitle>Risks</SectionTitle>
@@ -200,7 +189,6 @@ function AnalysisResult({ result, market = 'spot' }) {
         </>
       )}
 
-      {/* Invalidation */}
       {result.invalidation && (
         <div style={{
           fontFamily: "'Raleway', sans-serif", fontSize: 10, color: '#f97316',
@@ -214,12 +202,10 @@ function AnalysisResult({ result, market = 'spot' }) {
   );
 }
 
-// ── Parse retry-after seconds from a 429 message ─────────────────────────────
 function parseRetrySeconds(msg = '') {
   const m = msg.match(/retry in (\d+(?:\.\d+)?)/i);
-  return m ? Math.ceil(parseFloat(m[1])) + 2 : 62; // +2s buffer; default 62s
+  return m ? Math.ceil(parseFloat(m[1])) + 2 : 62;
 }
-
 function is429(msg = '') {
   return msg.includes('429') || msg.toLowerCase().includes('quota') || msg.toLowerCase().includes('rate limit');
 }
@@ -232,12 +218,11 @@ export default function GeminiPanel({ symbol, timeframe, ticker, inds, signal, c
   const [error,     setError]     = useState(null);
   const [collapsed, setCollapsed] = useState(false);
   const [model,     setModel]     = useState('gemini-2.5-flash');
-  const [retryIn,   setRetryIn]   = useState(null); // countdown seconds
+  const [retryIn,   setRetryIn]   = useState(null);
   const retryTimer  = useRef(null);
   const pendingData = useRef(null);
-  const retryCount  = useRef(0);                    // max 1 auto-retry
+  const retryCount  = useRef(0);
 
-  // Countdown + single auto-retry
   useEffect(() => {
     if (retryIn === null) return;
     if (retryIn <= 0) {
@@ -249,7 +234,6 @@ export default function GeminiPanel({ symbol, timeframe, ticker, inds, signal, c
         pendingData.current = null;
         runAnalysis(d.symbol, d.timeframe, d.ticker, d.inds, d.signal, d.candles, d.market, d.model);
       } else {
-        // Give up — tell the user to retry manually
         pendingData.current = null;
         setError('Rate limit still active — please try again in a minute.');
       }
@@ -266,7 +250,7 @@ export default function GeminiPanel({ symbol, timeframe, ticker, inds, signal, c
     try {
       const res = await getGeminiAnalysis({ symbol: sym, timeframe: tf, ticker: tkr, inds: ids, signal: sig, candles: cnd, market: mkt }, mdl);
       setResult(res);
-      retryCount.current = 0; // reset on success
+      retryCount.current = 0;
     } catch (err) {
       if (err.message === 'ABORTED') {
         setError('Analysis cancelled.');
@@ -277,9 +261,7 @@ export default function GeminiPanel({ symbol, timeframe, ticker, inds, signal, c
         setError('rate-limit');
       } else {
         pendingData.current = null;
-        setError(is429(err.message)
-          ? 'Rate limit still active — please try again in a minute.'
-          : err.message);
+        setError(is429(err.message) ? 'Rate limit still active — please try again in a minute.' : err.message);
       }
     } finally {
       setLoading(false);
@@ -330,8 +312,7 @@ export default function GeminiPanel({ symbol, timeframe, ticker, inds, signal, c
                 <span style={{
                   fontFamily: "'Raleway', sans-serif", fontSize: 9, fontWeight: 700,
                   color: sigColor(sigBadge), background: recBg(sigBadge),
-                  border: `1px solid ${sigColor(sigBadge)}40`,
-                  padding: '1px 7px', borderRadius: 3,
+                  border: `1px solid ${sigColor(sigBadge)}40`, padding: '1px 7px', borderRadius: 3,
                 }}>
                   {sigBadge}
                 </span>
@@ -358,30 +339,33 @@ export default function GeminiPanel({ symbol, timeframe, ticker, inds, signal, c
 
       {!collapsed && (
         <>
-          {/* ── Model selector + Analyse button ── */}
-          <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
-            <select
-              value={model}
-              onChange={e => setModel(e.target.value)}
-              style={{
-                flex: 1, background: C.bg, border: `1px solid ${C.border}`,
-                borderRadius: 5, padding: '5px 8px',
-                fontFamily: "'Raleway', sans-serif", fontSize: 11,
-                color: C.text, cursor: 'pointer',
-              }}
-            >
-              {GEMINI_MODELS.map(m => (
-                <option key={m.id} value={m.id}>{m.label}</option>
-              ))}
-            </select>
+          {/* ── Model selector ── */}
+          <select
+            value={model}
+            onChange={e => setModel(e.target.value)}
+            style={{
+              width: '100%', marginBottom: 8,
+              background: C.bg, border: `1px solid ${C.border}`,
+              borderRadius: 5, padding: '5px 8px',
+              fontFamily: "'Raleway', sans-serif", fontSize: 11,
+              color: C.text, cursor: 'pointer', boxSizing: 'border-box',
+            }}
+          >
+            {GEMINI_MODELS.map(m => (
+              <option key={m.id} value={m.id}>{m.label}</option>
+            ))}
+          </select>
 
+          {/* ── Analyse / Stop button ── */}
+          <div style={{ marginBottom: 12 }}>
             {loading ? (
               <button
                 onClick={abort}
                 style={{
-                  flex: 2, fontFamily: "'Raleway', sans-serif", fontWeight: 700, fontSize: 11,
-                  padding: '6px 10px', borderRadius: 5, cursor: 'pointer',
+                  width: '100%', fontFamily: "'Raleway', sans-serif", fontWeight: 700, fontSize: 11,
+                  padding: '7px 10px', borderRadius: 5, cursor: 'pointer',
                   border: '1px solid #f8514960', background: '#f8514918', color: '#f85149',
+                  boxSizing: 'border-box',
                 }}
               >
                 ■ Stop
@@ -391,13 +375,13 @@ export default function GeminiPanel({ symbol, timeframe, ticker, inds, signal, c
                 onClick={analyze}
                 disabled={!candles?.length}
                 style={{
-                  flex: 2, fontFamily: "'Raleway', sans-serif", fontWeight: 700, fontSize: 11,
-                  padding: '6px 10px', borderRadius: 5,
+                  width: '100%', fontFamily: "'Raleway', sans-serif", fontWeight: 700, fontSize: 11,
+                  padding: '7px 10px', borderRadius: 5,
                   cursor: candles?.length ? 'pointer' : 'not-allowed',
                   border: `1px solid ${G_BLUE}60`,
                   background: `${G_BLUE}15`,
                   color: candles?.length ? G_BLUE : C.muted,
-                  transition: 'all 0.15s',
+                  transition: 'all 0.15s', boxSizing: 'border-box',
                 }}
               >
                 ✦ Analyse with Gemini
@@ -426,7 +410,7 @@ export default function GeminiPanel({ symbol, timeframe, ticker, inds, signal, c
             </div>
           )}
 
-          {/* ── Error / rate-limit countdown ── */}
+          {/* ── Error / rate-limit ── */}
           {error && !loading && (
             error === 'rate-limit' ? (
               <div style={{
@@ -435,14 +419,12 @@ export default function GeminiPanel({ symbol, timeframe, ticker, inds, signal, c
                 border: `1px solid ${G_YELLOW}40`, borderRadius: 5,
                 padding: '10px 12px', marginBottom: 10, textAlign: 'center',
               }}>
-                <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>
-                  ⏳ Free tier rate limit hit
-                </div>
+                <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>⏳ Free tier rate limit hit</div>
                 <div style={{ color: '#b8cce0', marginBottom: 6 }}>
                   Auto-retrying in <span style={{ color: G_YELLOW, fontWeight: 700, fontSize: 14 }}>{retryIn}s</span>
                 </div>
                 <div style={{ fontSize: 9, color: '#6b8096' }}>
-                  Gemini free tier: 15 requests / min · Switch to 1.5 Flash for a separate quota
+                  Gemini free tier: 15 req/min · Switch to 1.5 Flash for a separate quota
                 </div>
                 <button
                   onClick={abort}
@@ -468,7 +450,7 @@ export default function GeminiPanel({ symbol, timeframe, ticker, inds, signal, c
           )}
 
           {/* ── Result ── */}
-          {result && !loading && <AnalysisResult result={result} market={market} />}
+          {result && !loading && <AnalysisResult result={result} />}
 
           {/* ── Empty state ── */}
           {!result && !loading && !error && (

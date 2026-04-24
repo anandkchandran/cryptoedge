@@ -14,8 +14,8 @@ import { SignalCard, SignalBreakdown, IndicatorValues, Disclaimer } from './comp
 
 import SurgingList         from './components/SurgingList';
 import PaperTrading        from './components/PaperTrading';
+import ClaudePanel         from './components/ClaudePanel';
 import GeminiPanel         from './components/GeminiPanel';
-import GroqPanel           from './components/GroqPanel';
 
 // ── Spot / Futures toggle — displayed inside the chart column ─────────────────
 function MarketToggle({ market, onChange, C }) {
@@ -198,18 +198,20 @@ function AppInner() {
                 <SignalCard      signal={signal} market={market} />
                 <SignalBreakdown signal={signal} />
                 <IndicatorValues inds={inds} candles={candles} />
-                <GeminiPanel
+                <ClaudePanel
                   symbol={symbol} timeframe={timeframe}
                   ticker={ticker} inds={inds}
                   signal={signal} candles={candles}
                   market={market}
                 />
-                <GroqPanel
-                  symbol={symbol} timeframe={timeframe}
-                  ticker={ticker} inds={inds}
-                  signal={signal} candles={candles}
-                  market={market}
-                />
+                {process.env.NODE_ENV === 'production' && (
+                  <GeminiPanel
+                    symbol={symbol} timeframe={timeframe}
+                    ticker={ticker} inds={inds}
+                    signal={signal} candles={candles}
+                    market={market}
+                  />
+                )}
                 <PaperTrading ticker={ticker} symbol={symbol} />
                 <Disclaimer      lastUpdate={lastUpdate} />
               </div>

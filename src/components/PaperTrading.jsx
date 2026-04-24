@@ -52,7 +52,7 @@ function LeverageButton({ val, active, onClick, C }) {
   return (
     <button onClick={() => onClick(val)} style={{
       fontFamily: "'Raleway', sans-serif", fontWeight: 700, fontSize: 10,
-      padding: '3px 8px', borderRadius: 4,
+      height: 26, padding: '0 8px', borderRadius: 4, boxSizing: 'border-box',
       border:  `1px solid ${active ? '#7c6bfa60' : C.border}`,
       background: active ? '#7c6bfa18' : 'transparent',
       color:   active ? '#7c6bfa' : C.muted,
@@ -442,7 +442,7 @@ export default function PaperTrading({ ticker, symbol }) {
           {/* Margin input */}
           <div style={{ marginBottom: 8 }}>
             <div style={{ fontFamily: "'Raleway', sans-serif", fontSize: 9, color: C.muted, marginBottom: 4 }}>Margin (USDT)</div>
-            <div style={{ display: 'flex', gap: 4 }}>
+            <div style={{ display: 'flex', gap: 4, alignItems: 'stretch' }}>
               <input
                 type="number"
                 value={size}
@@ -451,7 +451,7 @@ export default function PaperTrading({ ticker, symbol }) {
                 max={balance}
                 style={{
                   flex: 1, background: C.card, border: `1px solid ${C.border}`,
-                  borderRadius: 4, padding: '5px 8px',
+                  borderRadius: 4, padding: '5px 8px', height: 30, boxSizing: 'border-box',
                   fontFamily: "'Roboto Mono', monospace", fontSize: 12,
                   color: C.text, outline: 'none',
                 }}
@@ -461,7 +461,7 @@ export default function PaperTrading({ ticker, symbol }) {
                   onClick={() => setSize((balance * pct / 100).toFixed(2))}
                   style={{
                     fontFamily: "'Raleway', sans-serif", fontSize: 9, fontWeight: 700,
-                    padding: '4px 8px', borderRadius: 4,
+                    height: 30, padding: '0 8px', borderRadius: 4, boxSizing: 'border-box',
                     border: `1px solid ${C.border}`, background: 'transparent',
                     color: C.muted, cursor: 'pointer',
                   }}>
@@ -574,12 +574,13 @@ export default function PaperTrading({ ticker, symbol }) {
         </div>
 
         {/* ── Tabs ── */}
-        <div style={{ display: 'flex', gap: 4, marginBottom: 8 }}>
+        <div style={{ display: 'flex', gap: 4, marginBottom: 8, alignItems: 'center' }}>
           {['positions', 'history'].map(t => (
             <button key={t} onClick={() => setTab(t)} style={{
               fontFamily: "'Raleway', sans-serif", fontSize: 9, fontWeight: 700,
               textTransform: 'uppercase', letterSpacing: 0.8,
-              padding: '3px 10px', borderRadius: 4, cursor: 'pointer',
+              height: 26, padding: '0 10px', borderRadius: 4, cursor: 'pointer',
+              boxSizing: 'border-box',
               border: `1px solid ${tab === t ? '#7c6bfa60' : C.border}`,
               background: tab === t ? '#7c6bfa18' : 'transparent',
               color: tab === t ? '#7c6bfa' : C.muted,
@@ -590,7 +591,8 @@ export default function PaperTrading({ ticker, symbol }) {
           <button onClick={handleReset} style={{
             marginLeft: 'auto',
             fontFamily: "'Raleway', sans-serif", fontSize: 9, fontWeight: 700,
-            padding: '3px 10px', borderRadius: 4, cursor: 'pointer',
+            height: 26, padding: '0 10px', borderRadius: 4, cursor: 'pointer',
+            boxSizing: 'border-box',
             border: `1px solid ${confirmReset ? '#f8514960' : C.border}`,
             background: confirmReset ? '#f8514918' : 'transparent',
             color: confirmReset ? '#f85149' : C.muted,
