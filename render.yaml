@@ -1,0 +1,23 @@
+# Render deployment config — https://render.com/docs/infrastructure-as-code
+# Deploy: connect your GitHub repo in Render dashboard → auto-detected
+
+services:
+  - type: web
+    name: cryptoedge
+    runtime: node
+    region: oregon          # US West — free tier eligible
+    plan: free              # 750 free hours/month, spins down after 15min inactivity
+
+    buildCommand: npm install --omit=dev --ignore-scripts
+    startCommand: node server.js
+
+    # Auto-deploy on push to this branch
+    autoDeploy: true
+
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000          # Render assigns 10000 by default for web services
+      - key: GEMINI_API_KEY
+        sync: false           # Set manually in Render dashboard → Environment
