@@ -22,7 +22,7 @@ function CoinRow({ coin, isActive, onSelect, C }) {
 
   return (
     <div
-      onClick={() => onSelect({ label: coin.label, id: coin.id, tv: coin.isFutures ? coin.tvFutures : coin.tv })}
+      onClick={() => onSelect({ label: coin.label, id: coin.id, tv: coin.isFutures ? coin.tvFutures : coin.tv, isFutures: coin.isFutures })}
       style={{
         padding:       '9px 12px',
         cursor:        'pointer',

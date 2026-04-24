@@ -210,7 +210,7 @@ function AppInner() {
               {/* Left: Surging list */}
               <div className={`col-surge${mobTab === 'markets' ? ' mob-active' : ''}`}
                 style={{ borderRight: `1px solid ${C.border}` }}>
-                <SurgingList currentSymbol={symbol} onSelect={(s) => { setSymbol(s); setMobTab('chart'); }} />
+                <SurgingList currentSymbol={symbol} onSelect={(s) => { setSymbol(s); setMarket(s.isFutures ? 'futures' : 'spot'); setMobTab('chart'); }} />
               </div>
 
               {/* Centre: Charts */}
