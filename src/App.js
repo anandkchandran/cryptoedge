@@ -16,6 +16,7 @@ import SurgingList         from './components/SurgingList';
 import PaperTrading        from './components/PaperTrading';
 import ClaudePanel         from './components/ClaudePanel';
 import GeminiPanel         from './components/GeminiPanel';
+import GrokPanel           from './components/GrokPanel';
 
 // ── Spot / Futures toggle — displayed inside the chart column ─────────────────
 function MarketToggle({ market, onChange, C }) {
@@ -206,6 +207,14 @@ function AppInner() {
                 />
                 {process.env.NODE_ENV === 'production' && (
                   <GeminiPanel
+                    symbol={symbol} timeframe={timeframe}
+                    ticker={ticker} inds={inds}
+                    signal={signal} candles={candles}
+                    market={market}
+                  />
+                )}
+                {process.env.NODE_ENV === 'production' && (
+                  <GrokPanel
                     symbol={symbol} timeframe={timeframe}
                     ticker={ticker} inds={inds}
                     signal={signal} candles={candles}
