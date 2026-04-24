@@ -199,12 +199,14 @@ function AppInner() {
                 <SignalCard      signal={signal} market={market} />
                 <SignalBreakdown signal={signal} />
                 <IndicatorValues inds={inds} candles={candles} />
-                <ClaudePanel
-                  symbol={symbol} timeframe={timeframe}
-                  ticker={ticker} inds={inds}
-                  signal={signal} candles={candles}
-                  market={market}
-                />
+                {process.env.NODE_ENV !== 'production' && (
+                  <ClaudePanel
+                    symbol={symbol} timeframe={timeframe}
+                    ticker={ticker} inds={inds}
+                    signal={signal} candles={candles}
+                    market={market}
+                  />
+                )}
                 {process.env.NODE_ENV === 'production' && (
                   <GeminiPanel
                     symbol={symbol} timeframe={timeframe}
