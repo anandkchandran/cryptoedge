@@ -12,9 +12,8 @@ const API_BASE  = process.env.REACT_APP_API_URL || 'http://localhost:3001';
 const PROXY_URL = `${API_BASE}/api/grok`;
 
 export const GROK_MODELS = [
-  { id: 'grok-3',      label: 'Grok 3 (default)' },
-  { id: 'grok-3-mini', label: 'Grok 3 Mini'      },
-  { id: 'grok-2-1212', label: 'Grok 2'            },
+  { id: 'grok-4.20',        label: 'Grok 4.20 (default)' },
+  { id: 'grok-4.20-latest', label: 'Grok 4.20 Latest'    },
 ];
 
 const SYSTEM_PROMPT = 'You are an expert cryptocurrency technical analyst. Respond with ONLY valid JSON — no markdown code fences, no preamble, no explanation outside the JSON object. Your signal must be one of: LONG, SHORT, or HOLD.';
@@ -28,7 +27,7 @@ export async function abortGrokAnalysis() {
 }
 
 // ── Main API call ─────────────────────────────────────────────────────────────
-export async function getGrokAnalysis(data, model = 'grok-3') {
+export async function getGrokAnalysis(data, model = 'grok-4.20') {
   const prompt = buildPrompt(data);
   _abortController = new AbortController();
   const { signal } = _abortController;

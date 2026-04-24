@@ -296,7 +296,7 @@ function callGemini({ prompt, systemPrompt, model = 'gemini-2.5-flash' }) {
 }
 
 // ── Grok / xAI API ───────────────────────────────────────────────────────────
-function callGrok({ prompt, systemPrompt, model = 'grok-3' }) {
+function callGrok({ prompt, systemPrompt, model = 'grok-4.20' }) {
   return new Promise((resolve, reject) => {
     const apiKey = process.env.XAI_API_KEY;
     if (!apiKey) return reject(new Error('XAI_API_KEY is not set — add it to your environment'));

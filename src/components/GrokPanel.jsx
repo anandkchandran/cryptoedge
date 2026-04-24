@@ -201,7 +201,7 @@ export default function GrokPanel({ symbol, timeframe, ticker, inds, signal, can
   const [loading,   setLoading]   = useState(false);
   const [error,     setError]     = useState(null);
   const [collapsed, setCollapsed] = useState(false);
-  const [model,     setModel]     = useState('grok-3');
+  const [model,     setModel]     = useState('grok-4.20');
   const abortRef = useRef(false);
 
   // Reset result when symbol/timeframe changes
