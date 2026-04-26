@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useTheme } from '../contexts/ThemeContext';
 import { fmtPrice } from '../utils/format';
 import { getClaudeAnalysis, abortClaudeAnalysis } from '../utils/claude';
@@ -236,6 +236,15 @@ export default function ClaudePanel({ symbol, timeframe, ticker, inds, signal, c
       abortCtrl.current = null;
     }
   }, [symbol, timeframe, ticker, inds, signal, candles, market]);
+
+  // Reset analysis when symbol or timeframe changes
+  useEffect(() => {
+    abortClaudeAnalysis();
+    if (abortCtrl.current) { abortCtrl.current.abort(); abortCtrl.current = null; }
+    setResult(null);
+    setError(null);
+    setLoading(false);
+  }, [symbol?.id, timeframe?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const abort = () => {
     abortClaudeAnalysis();

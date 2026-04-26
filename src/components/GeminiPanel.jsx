@@ -279,7 +279,7 @@ export default function GeminiPanel({ symbol, timeframe, ticker, inds, signal, c
     setError(null);
     setRetryIn(null);
     setLoading(false);
-  }, [symbol?.id, timeframe?.value]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [symbol?.id, timeframe?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const analyze = useCallback(() => {
     if (!candles?.length || !inds) return;
