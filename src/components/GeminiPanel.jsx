@@ -269,6 +269,18 @@ export default function GeminiPanel({ symbol, timeframe, ticker, inds, signal, c
     }
   }, []);
 
+  // Reset analysis when symbol or timeframe changes
+  useEffect(() => {
+    abortGeminiAnalysis();
+    clearTimeout(retryTimer.current);
+    pendingData.current = null;
+    retryCount.current  = 0;
+    setResult(null);
+    setError(null);
+    setRetryIn(null);
+    setLoading(false);
+  }, [symbol?.id, timeframe?.value]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const analyze = useCallback(() => {
     if (!candles?.length || !inds) return;
     retryCount.current = 0;
