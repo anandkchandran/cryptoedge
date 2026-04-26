@@ -221,7 +221,7 @@ function AppInner() {
                   ? <TradingViewWidget symbol={symbol} timeframe={timeframe} market={market} />
                   : (
                     <>
-                      <PriceChart data={chartData} />
+                      <PriceChart data={chartData} candles={candles} />
                       <RSIChart   data={chartData} />
                       <MACDChart  data={chartData} />
                     </>

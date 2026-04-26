@@ -49,6 +49,7 @@ export default function SvgChart({
   xKey = 't',
   tooltip = true,
   clipId = 'clip0',
+  overlays = null,   // fn({ xScale, yScale, W, H }) → SVG elements (rendered inside clip group)
 }) {
   const containerRef = useRef(null);
   const width = useDimensions(containerRef);
@@ -169,8 +170,9 @@ export default function SvgChart({
             );
           })}
 
-          {/* Clip group for series */}
+          {/* Clip group for series + overlays */}
           <g clipPath={`url(#${clipId})`}>
+            {overlays && overlays({ xScale, yScale, W, H })}
             {series.map(s => {
               if (s.type === 'area') {
                 return (

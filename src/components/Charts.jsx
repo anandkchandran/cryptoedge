@@ -1,7 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import SvgChart from './SvgChart';
 import { useTheme } from '../contexts/ThemeContext';
 import { fmtAxis } from '../utils/format';
+import { calcZigZag } from '../utils/zigzag';
+
+const ZZ_COLOR     = '#e879f9';   // fuchsia — stands out from all existing lines
+const ZZ_THRESHOLDS = [3, 5, 8, 10];
 
 const CardWrap = ({ title, legend, children }) => {
   const { colors: C } = useTheme();
@@ -27,18 +31,107 @@ const Dot = ({ color }) => (
 );
 
 // ── Price Chart ───────────────────────────────────────────────────────────────
-export function PriceChart({ data }) {
+export function PriceChart({ data, candles }) {
   const { colors: C } = useTheme();
+  const [zzOn,        setZzOn]        = useState(false);
+  const [zzThreshold, setZzThreshold] = useState(5);
+
   if (!data.length) return null;
+
+  // Compute ZigZag pivots when toggled on
+  const pivots = zzOn && candles?.length ? calcZigZag(candles, zzThreshold) : [];
+
+  // Render ZigZag as polyline segments inside the SvgChart clip group
+  const zigzagOverlay = zzOn && pivots.length >= 2
+    ? ({ xScale, yScale }) => {
+        const points = pivots
+          .map(p => `${xScale(p.index)},${yScale(p.price)}`)
+          .join(' ');
+        return (
+          <g key="zigzag">
+            <polyline
+              points={points}
+              stroke={ZZ_COLOR}
+              strokeWidth={1.5}
+              fill="none"
+              strokeLinejoin="round"
+              opacity={0.9}
+            />
+            {pivots.map((p, i) => (
+              <circle
+                key={i}
+                cx={xScale(p.index)}
+                cy={yScale(p.price)}
+                r={p.tentative ? 2.5 : 3.5}
+                fill={p.type === 'high' ? C.bear : C.bull}
+                stroke={ZZ_COLOR}
+                strokeWidth={1}
+                opacity={p.tentative ? 0.55 : 1}
+              />
+            ))}
+          </g>
+        );
+      }
+    : null;
+
   return (
     <CardWrap
       title="Price · EMA · Bollinger Bands"
       legend={
-        <span>
-          <Dot color={C.ema9}  />EMA9&nbsp;&nbsp;
-          <Dot color={C.ema21} />EMA21&nbsp;&nbsp;
-          <Dot color={C.ema50} />EMA50
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <span>
+            <Dot color={C.ema9}  />EMA9&nbsp;&nbsp;
+            <Dot color={C.ema21} />EMA21&nbsp;&nbsp;
+            <Dot color={C.ema50} />EMA50
+          </span>
+
+          {/* ZigZag toggle */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+            <button
+              onClick={() => setZzOn(v => !v)}
+              style={{
+                fontFamily:  "'Raleway', sans-serif",
+                fontSize:     9,
+                fontWeight:   700,
+                padding:     '2px 8px',
+                borderRadius: 4,
+                border:       `1px solid ${zzOn ? ZZ_COLOR + '80' : C.border}`,
+                background:   zzOn ? ZZ_COLOR + '20' : 'transparent',
+                color:        zzOn ? ZZ_COLOR : C.muted,
+                cursor:      'pointer',
+                letterSpacing: 0.4,
+                transition:  'all 0.15s',
+              }}
+            >
+              ⚡ ZigZag
+            </button>
+
+            {/* Threshold selector — only shown when active */}
+            {zzOn && (
+              <div style={{ display: 'flex', gap: 3 }}>
+                {ZZ_THRESHOLDS.map(t => (
+                  <button
+                    key={t}
+                    onClick={() => setZzThreshold(t)}
+                    style={{
+                      fontFamily:  "'Raleway', sans-serif",
+                      fontSize:     9,
+                      fontWeight:   700,
+                      padding:     '2px 6px',
+                      borderRadius: 3,
+                      border:      `1px solid ${zzThreshold === t ? ZZ_COLOR + '80' : C.border}`,
+                      background:   zzThreshold === t ? ZZ_COLOR + '25' : 'transparent',
+                      color:        zzThreshold === t ? ZZ_COLOR : C.muted,
+                      cursor:      'pointer',
+                    }}
+                  >
+                    {t}%
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
       }
     >
       <SvgChart
@@ -46,6 +139,7 @@ export function PriceChart({ data }) {
         height={230}
         yFormatter={fmtAxis}
         clipId="price-clip"
+        overlays={zigzagOverlay}
         series={[
           { key: 'bbUpper',  color: C.bb,    width: 1, dasharray: '4 3', label: 'BB Upper' },
           { key: 'bbLower',  color: C.bb,    width: 1, dasharray: '4 3', label: 'BB Lower' },
