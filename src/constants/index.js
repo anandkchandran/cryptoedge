@@ -21,6 +21,8 @@ export const TIMEFRAMES = [
   { label: '1h',  id: '1h',  tv: '60'  },
   { label: '4h',  id: '4h',  tv: '240' },
   { label: '1D',  id: '1d',  tv: 'D'   },
+  { label: '1W',  id: '1w',  tv: 'W'   },
+  { label: '1M',  id: '1M',  tv: 'M'   },
 ];
 
 export const COLORS = {
