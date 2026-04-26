@@ -447,28 +447,29 @@ export default function PaperTrading({ ticker, symbol }) {
           {/* Margin input */}
           <div style={{ marginBottom: 8 }}>
             <div style={{ fontFamily: "'Raleway', sans-serif", fontSize: 9, color: C.muted, marginBottom: 4 }}>Margin (USDT)</div>
-            <div style={{ display: 'flex', gap: 4, alignItems: 'stretch' }}>
-              <input
-                type="number"
-                value={size}
-                onChange={e => setSize(e.target.value)}
-                min="1"
-                max={balance}
-                style={{
-                  flex: 1, background: C.card, border: `1px solid ${C.border}`,
-                  borderRadius: 4, padding: '5px 8px', height: 30, boxSizing: 'border-box',
-                  fontFamily: "'Roboto Mono', monospace", fontSize: 12,
-                  color: C.text, outline: 'none',
-                }}
-              />
-              {[25, 50, 100].map(pct => (
+            <input
+              type="number"
+              value={size}
+              onChange={e => setSize(e.target.value)}
+              min="1"
+              max={balance}
+              style={{
+                width: '100%', background: C.card, border: `1px solid ${C.border}`,
+                borderRadius: 4, padding: '5px 8px', height: 30, boxSizing: 'border-box',
+                fontFamily: "'Roboto Mono', monospace", fontSize: 12,
+                color: C.text, outline: 'none', marginBottom: 5,
+              }}
+            />
+            {/* Quick-select % buttons */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 4 }}>
+              {[25, 50, 75, 100].map(pct => (
                 <button key={pct}
                   onClick={() => setSize((balance * pct / 100).toFixed(2))}
                   style={{
                     fontFamily: "'Raleway', sans-serif", fontSize: 11, fontWeight: 700,
-                    height: 30, padding: '0 9px', borderRadius: 4, boxSizing: 'border-box',
+                    height: 28, borderRadius: 4, boxSizing: 'border-box',
                     border: `1px solid ${C.border}`, background: `${C.border}30`,
-                    color: C.text, cursor: 'pointer',
+                    color: C.text, cursor: 'pointer', transition: 'all 0.12s',
                   }}>
                   {pct}%
                 </button>
