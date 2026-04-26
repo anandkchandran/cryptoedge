@@ -433,9 +433,9 @@ export default function PaperTrading({ ticker, symbol }) {
             <div style={{ ...sectionHead, color: C.muted, fontSize: 8, marginBottom: 3 }}>Equity</div>
             <div className="mono" style={{ fontSize: 14, fontWeight: 700, color: totalEquity >= STARTING_BALANCE ? '#10d67a' : '#f85149' }}>
               ${fmtPrice(totalEquity, 2)}
-              <span style={{ fontSize: 9, marginLeft: 4, opacity: 0.8 }}>
-                ({totalEquity >= STARTING_BALANCE ? '+' : ''}{(((totalEquity - STARTING_BALANCE) / STARTING_BALANCE) * 100).toFixed(1)}%)
-              </span>
+            </div>
+            <div className="mono" style={{ fontSize: 10, color: totalEquity >= STARTING_BALANCE ? '#10d67a' : '#f85149', opacity: 0.8, marginTop: 1 }}>
+              {totalEquity >= STARTING_BALANCE ? '+' : ''}{(((totalEquity - STARTING_BALANCE) / STARTING_BALANCE) * 100).toFixed(1)}%
             </div>
           </div>
         </div>
